@@ -157,7 +157,33 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .ov-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px}
 .sheet{background:#fff;border-radius:6px;padding:34px 38px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
 
-/* ---------- Druck-Ansicht ---------- */
+/* ---------- Kündigungs-Modal ---------- */
+#kOverlay{position:fixed;inset:0;background:rgba(11,32,60,.55);z-index:55;display:none;overflow:auto;padding:26px 14px}
+#kOverlay.open{display:block}
+.k-card{max-width:660px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden}
+.k-head{background:var(--blau-tief);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.k-head h2{margin:0;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.k-head .sub{font-size:12px;color:#9FB4D4;margin-top:2px}
+.k-body{padding:18px 20px 20px}
+.k-sec{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blau);margin:16px 0 8px}
+.k-sec:first-child{margin-top:0}
+.k-note{font-size:11.5px;color:var(--muted);margin-top:4px}
+.k-note.ok{color:var(--gruen)}
+.k-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.k-actions .btn{flex:1;min-width:150px;padding:10px}
+.check-row{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px}
+.check-row input{width:16px;height:16px;accent-color:var(--blau)}
+
+/* ---------- Kündigungsbrief (Druck) ---------- */
+.kbrief{font-family:var(--sans);font-size:11pt;line-height:1.55;color:#111;padding:12mm 8mm;max-width:180mm}
+.kbrief p{margin:0 0 4pt}
+.kbrief .kblock{margin-bottom:18pt}
+.kbrief .kdatum{text-align:right;margin:22pt 0 26pt}
+.kbrief .kbetreff{font-weight:700;margin:0 0 16pt}
+.kbrief .kabsatz{margin-bottom:12pt}
+.kbrief .ksig{margin-top:42pt}
+.kbrief .ksigline{display:inline-block;border-top:.75pt solid #111;padding-top:3pt;min-width:60mm}
+
 #printArea{display:none}
 .psheet h1{font-size:19pt;letter-spacing:.16em;margin:0 0 2px;font-weight:700}
 .psheet .fam{font-size:13pt;font-weight:700;margin:0 0 2px}
@@ -176,7 +202,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .ptable tr{page-break-inside:avoid}
 @media print{
   body{background:#fff}
-  .top,.casebar,.app,.bilanz,#overlay,#toast{display:none !important}
+  .top,.casebar,.app,.bilanz,#overlay,#kOverlay,#toast{display:none !important}
   #printArea{display:block}
   @page{size:A4;margin:13mm}
 }
@@ -378,6 +404,59 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
   </div>
 </div>
 
+<!-- ================= Kündigungsersteller ================= -->
+<div id="kOverlay">
+  <div class="k-card">
+    <div class="k-head">
+      <div>
+        <h2>Kündigung erstellen</h2>
+        <div class="sub" id="kSub"></div>
+      </div>
+      <button class="btn ghost" id="kClose">Schließen</button>
+    </div>
+    <div class="k-body">
+      <div class="k-sec">Absender (Versicherungsnehmer)</div>
+      <div class="fgrid">
+        <div class="f wide"><label for="k_name">Name</label><input id="k_name" type="text" placeholder="Vorname Nachname"></div>
+        <div class="f"><label for="k_strasse">Straße und Hausnummer</label><input id="k_strasse" type="text" placeholder="Musterweg 1"></div>
+        <div class="f"><label for="k_plzort">PLZ und Ort</label><input id="k_plzort" type="text" placeholder="90552 Röthenbach a. d. Pegnitz"></div>
+        <div class="f"><label for="k_ortwahl">Ort in der Datumszeile</label>
+          <select id="k_ortwahl">
+            <option value="Röthenbach">Röthenbach a. d. Pegnitz</option>
+            <option value="Schnaittach">Schnaittach</option>
+            <option value="__custom">Anderer Ort …</option>
+          </select>
+        </div>
+        <div class="f"><label for="k_datum">Datum</label><input id="k_datum" type="date"></div>
+        <div class="f wide" id="kOrtCustomWrap" style="display:none"><label for="k_ortcustom">Ort (manuell)</label><input id="k_ortcustom" type="text" placeholder="Nürnberg"></div>
+      </div>
+
+      <div class="k-sec">Empfänger (Versicherer)</div>
+      <div class="fgrid">
+        <div class="f wide"><label for="k_ges">Gesellschaft</label><input id="k_ges" type="text"></div>
+        <div class="f wide"><label for="k_adr">Anschrift (Straße, PLZ Ort — eine Angabe pro Zeile)</label>
+          <textarea id="k_adr" style="min-height:64px" placeholder="VHV-Platz 1&#10;30177 Hannover"></textarea>
+          <div class="k-note" id="kAdrNote"></div>
+        </div>
+        <div class="f wide"><label for="k_fax">Fax-Nr. (optional)</label><input id="k_fax" class="mono" type="text" placeholder="0511 9078999"></div>
+      </div>
+
+      <div class="k-sec">Vertrag</div>
+      <div class="fgrid">
+        <div class="f"><label for="k_vsnr">Vertragsnummer</label><input id="k_vsnr" class="mono" type="text"></div>
+        <div class="f"><label for="k_termin">Kündigung zum</label><input id="k_termin" type="date"></div>
+      </div>
+      <div class="check-row"><input type="checkbox" id="k_hilfsweise" checked><label for="k_hilfsweise">„hilfsweise zum nächstmöglichen Termin" ergänzen</label></div>
+      <div class="check-row"><input type="checkbox" id="k_rueckwerbung" checked><label for="k_rueckwerbung">Rückwerbung untersagen</label></div>
+
+      <div class="k-actions">
+        <button class="btn primary" id="kDocx">Word (.docx)</button>
+        <button class="btn" id="kPrint">Drucken / als PDF speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="printArea"></div>
 
 <script>
@@ -407,9 +486,41 @@ const ZW = {
   jaehrlich:{f:1, l:'jährlich'}
 };
 
-let state = { kunde:'', spalte:'Anderer Versicherer', policies:[] };
+let state = { kunde:'', spalte:'Anderer Versicherer', policies:[], absender:{name:'',strasse:'',ort:''}, kOrtWahl:'Röthenbach' };
 let selectedSparte = null;
 let editId = null;
+let kPolicy = null;
+let printMode = 'vergleich';
+
+/* Zentraladressen der Versicherer — Vorschläge, im Formular stets änderbar.
+   Quellen: Unternehmensangaben/Verzeichnisse, Stand Juli 2026. Fax nur wo verlässlich belegt. */
+const VERSICHERER_DB = [
+  {m:['allianz'], name:'Allianz Versicherungs-AG', adr:'10900 Berlin', fax:'0800 4400101'},
+  {m:['arag'], name:'ARAG SE', adr:'ARAG Platz 1\n40472 Düsseldorf', fax:''},
+  {m:['axa'], name:'AXA Versicherung AG', adr:'Colonia-Allee 10-20\n51067 Köln', fax:''},
+  {m:['barmenia'], name:'Barmenia Versicherungen', adr:'Barmenia-Allee 1\n42119 Wuppertal', fax:''},
+  {m:['debeka'], name:'Debeka Versicherungen', adr:'Ferdinand-Sauerbruch-Straße 18\n56073 Koblenz', fax:''},
+  {m:['haftpflichtkasse'], name:'Die Haftpflichtkasse VVaG', adr:'Darmstädter Straße 103\n64380 Roßdorf', fax:'06154 601-2288'},
+  {m:['dkv'], name:'DKV Deutsche Krankenversicherung AG', adr:'50594 Köln', fax:'0221 578-6000'},
+  {m:['ergo'], name:'ERGO Versicherung AG', adr:'ERGO-Platz 1\n40477 Düsseldorf', fax:'0211 477-1500'},
+  {m:['generali'], name:'Generali Deutschland Versicherung AG', adr:'Adenauerring 7\n81737 München', fax:'089 5121-1000'},
+  {m:['gothaer'], name:'Gothaer Allgemeine Versicherung AG', adr:'Gothaer Allee 1\n50969 Köln', fax:'0221 3090-7079'},
+  {m:['huk24'], name:'HUK24 AG', adr:'Willi-Hussong-Straße 2\n96444 Coburg', fax:''},
+  {m:['huk'], name:'HUK-COBURG Versicherungsgruppe', adr:'Bahnhofsplatz\n96444 Coburg', fax:'09561 96-3636'},
+  {m:['lvm'], name:'LVM Versicherung', adr:'Kolde-Ring 21\n48126 Münster', fax:''},
+  {m:['nürnberger','nuernberger'], name:'NÜRNBERGER Versicherung', adr:'Ostendstraße 100\n90334 Nürnberg', fax:''},
+  {m:['roland'], name:'ROLAND Rechtsschutz-Versicherungs-AG', adr:'Deutz-Kalker Straße 46\n50679 Köln', fax:'0221 8277-460'},
+  {m:['signal'], name:'SIGNAL IDUNA Gruppe', adr:'Joseph-Scherer-Straße 3\n44139 Dortmund', fax:''},
+  {m:['vhv'], name:'VHV Allgemeine Versicherung AG', adr:'VHV-Platz 1\n30177 Hannover', fax:'0511 9078999'},
+  {m:['württembergische','wuerttembergische'], name:'Württembergische Versicherung AG', adr:'Gutenbergstraße 30\n70176 Stuttgart', fax:''},
+  {m:['wgv'], name:'WGV Versicherung AG', adr:'Tübinger Straße 55\n70178 Stuttgart', fax:''},
+  {m:['zurich'], name:'Zurich Gruppe Deutschland', adr:'Deutzer Allee 1\n50679 Köln', fax:''}
+];
+function lookupVersicherer(ges){
+  const g = (ges||'').toLowerCase();
+  if(!g) return null;
+  return VERSICHERER_DB.find(v => v.m.some(t => g.includes(t))) || null;
+}
 
 /* ---------- Speicher (nur wenn verfügbar; sonst rein im Arbeitsspeicher) ---------- */
 const store = (() => {
@@ -427,6 +538,8 @@ function restore(){
     const raw = store.getItem(STORE_KEY);
     if(raw){ const s = JSON.parse(raw); if(s && Array.isArray(s.policies)) state = s; }
   }catch(e){}
+  if(!state.absender) state.absender = {name:'',strasse:'',ort:''};
+  if(!state.kOrtWahl) state.kOrtWahl = 'Röthenbach';
 }
 
 /* ---------- Helfer ---------- */
@@ -730,6 +843,7 @@ function renderList(){
         '<div><div class="pcard-title">' + esc(displayName(p)) + '</div>' +
         '<div class="pcard-sub">' + (subParts.join(' · ') || '<span style="font-style:italic">ohne Angaben</span>') + '</div></div>' +
         '<div class="pcard-actions">' +
+          '<button class="btn small" data-act="kuend">Kündigung</button>' +
           '<button class="btn small" data-act="edit">Bearbeiten</button>' +
           '<button class="btn small" data-act="dup" title="Duplizieren">⧉</button>' +
           '<button class="btn small danger" data-act="del" title="Löschen">✕</button>' +
@@ -742,6 +856,7 @@ function renderList(){
         rabCtl +
       '</div>';
     card.querySelector('[data-act="edit"]').addEventListener('click', () => startEdit(p.id));
+    card.querySelector('[data-act="kuend"]').addEventListener('click', () => kOpen(p));
     const rabIn = card.querySelector('[data-act="rab"]');
     if(rabIn){
       rabIn.addEventListener('change', e => {
@@ -861,12 +976,146 @@ function buildPrintHtml(){
 }
 function openPreview(){
   if(!state.policies.length){ toast('Noch keine Verträge erfasst.'); return; }
+  printMode = 'vergleich';
   const html = buildPrintHtml();
   $('previewSheet').innerHTML = html;
   $('printArea').innerHTML = html;
   $('overlay').classList.add('open');
 }
-window.addEventListener('beforeprint', () => { $('printArea').innerHTML = buildPrintHtml(); });
+window.addEventListener('beforeprint', () => {
+  $('printArea').innerHTML = printMode==='kuendigung' ? buildKuendigungHtml() : buildPrintHtml();
+});
+
+/* ---------- Kündigungsersteller ---------- */
+function kOpen(p){
+  kPolicy = p;
+  $('kSub').textContent = displayName(p) + (p.gesellschaft ? ' · ' + p.gesellschaft : '');
+  // Absender
+  let name = state.absender.name || '';
+  if(!name && p.personen){
+    const m = p.personen.match(/VN\s+([^,;()]+)/i);
+    if(m) name = m[1].trim();
+  }
+  $('k_name').value = name;
+  $('k_strasse').value = state.absender.strasse || '';
+  $('k_plzort').value = state.absender.ort || '';
+  const ow = $('k_ortwahl');
+  if(state.kOrtWahl==='Röthenbach' || state.kOrtWahl==='Schnaittach'){ ow.value = state.kOrtWahl; $('kOrtCustomWrap').style.display='none'; }
+  else { ow.value = '__custom'; $('kOrtCustomWrap').style.display=''; $('k_ortcustom').value = state.kOrtWahl || ''; }
+  $('k_datum').value = new Date().toISOString().slice(0,10);
+  // Empfänger
+  const db = lookupVersicherer(p.gesellschaft);
+  $('k_ges').value = db ? db.name : (p.gesellschaft || '');
+  $('k_adr').value = db ? db.adr : '';
+  $('k_fax').value = db ? db.fax : '';
+  const note = $('kAdrNote');
+  if(db){
+    note.className = 'k-note';
+    note.textContent = 'Vorschlag aus dem Verzeichnis (Zentrale) — bitte vor Versand kurz prüfen.' + (db.fax ? '' : ' Für diesen Versicherer ist keine verlässliche Faxnummer hinterlegt.');
+  } else {
+    note.className = 'k-note';
+    note.textContent = 'Kein Eintrag im Verzeichnis — Anschrift bitte manuell eintragen.';
+  }
+  // Vertrag
+  $('k_vsnr').value = p.vsnr || '';
+  $('k_termin').value = p.ablauf || '';
+  $('k_hilfsweise').checked = true;
+  $('k_rueckwerbung').checked = true;
+  $('kOverlay').classList.add('open');
+}
+function kCollect(){
+  const ortWahl = $('k_ortwahl').value;
+  const ort = ortWahl==='__custom' ? $('k_ortcustom').value.trim() : ortWahl;
+  const d = {
+    name: $('k_name').value.trim(),
+    strasse: $('k_strasse').value.trim(),
+    plzort: $('k_plzort').value.trim(),
+    ort: ort,
+    datum: $('k_datum').value,
+    ges: $('k_ges').value.trim(),
+    adr: $('k_adr').value.trim(),
+    fax: $('k_fax').value.trim(),
+    vsnr: $('k_vsnr').value.trim(),
+    termin: $('k_termin').value,
+    hilfsweise: $('k_hilfsweise').checked,
+    rueckwerbung: $('k_rueckwerbung').checked
+  };
+  if(!d.name || !d.ges || !d.vsnr){ toast('Bitte mindestens Name, Gesellschaft und Vertragsnummer ausfüllen.'); return null; }
+  // Absender und Ortswahl für den nächsten Brief merken
+  state.absender = { name:d.name, strasse:d.strasse, ort:d.plzort };
+  state.kOrtWahl = ortWahl==='__custom' ? d.ort : ortWahl;
+  autosave();
+  return d;
+}
+function kBodyText(d){
+  let satz1;
+  if(d.termin){
+    satz1 = 'hiermit kündige ich o. g. Vertragsnummer fristgerecht zum ' + fmtDate(d.termin) +
+      (d.hilfsweise ? ', hilfsweise zum nächstmöglichen Termin.' : '.');
+  } else {
+    satz1 = 'hiermit kündige ich o. g. Vertragsnummer zum nächstmöglichen Termin.';
+  }
+  let satz2 = 'Bitte senden Sie mir eine schriftliche Kündigungsbestätigung unter Angabe des Beendigungszeitpunkts zu.';
+  if(d.rueckwerbung) satz2 += ' Eine Kontaktaufnahme Ihrerseits zum Zweck der Rückwerbung ist nicht erwünscht. Ich bitte Sie höflich, davon abzusehen.';
+  return { satz1, satz2 };
+}
+function buildKuendigungHtml(){
+  const d = kLast;
+  if(!d) return '';
+  const { satz1, satz2 } = kBodyText(d);
+  const adrLines = [esc(d.ges)].concat(d.adr ? d.adr.split(/\r?\n/).filter(x=>x.trim()).map(esc) : []);
+  return '<div class="kbrief">' +
+    '<p class="kblock">' + esc(d.name) + '<br>' + esc(d.strasse) + '<br>' + esc(d.plzort) + '</p>' +
+    '<p class="kblock">' + adrLines.join('<br>') + '</p>' +
+    (d.fax ? '<p class="kblock">Fax-Nr: ' + esc(d.fax) + '</p>' : '') +
+    '<p class="kdatum">' + esc(d.ort) + ', den ' + fmtDate(d.datum) + '</p>' +
+    '<p class="kbetreff">Kündigung der Vertragsnummer ' + esc(d.vsnr) + '</p>' +
+    '<p class="kabsatz">Sehr geehrte Damen und Herren,</p>' +
+    '<p class="kabsatz">' + esc(satz1) + '</p>' +
+    '<p class="kabsatz">' + esc(satz2) + '</p>' +
+    '<p class="kabsatz">Mit freundlichen Grüßen</p>' +
+    '<p class="ksig"><span class="ksigline">' + esc(d.name) + '</span></p>' +
+    '</div>';
+}
+let kLast = null;
+function buildKuendigungDocXml(d){
+  const { satz1, satz2 } = kBodyText(d);
+  const P = (text, o) => wP([wRun(text, Object.assign({sz:22}, o||{}))], Object.assign({after:60}, o||{}));
+  const EMPTY = wP([wRun('', {sz:22})], {after:60});
+  let body = '';
+  body += P(d.name) + P(d.strasse) + P(d.plzort);
+  body += EMPTY + EMPTY;
+  body += P(d.ges);
+  (d.adr ? d.adr.split(/\r?\n/).filter(x=>x.trim()) : []).forEach(l => { body += P(l); });
+  body += EMPTY;
+  if(d.fax){ body += P('Fax-Nr: ' + d.fax) + EMPTY; }
+  body += wP([wRun(d.ort + ', den ' + fmtDate(d.datum), {sz:22})], {align:'right', after:360});
+  body += wP([wRun('Kündigung der Vertragsnummer ' + d.vsnr, {b:true, sz:22})], {after:280});
+  body += P('Sehr geehrte Damen und Herren,', {after:200});
+  body += P(satz1, {after:200});
+  body += P(satz2, {after:200});
+  body += P('Mit freundlichen Grüßen', {after:800});
+  body += wP([wRun('_________________________', {sz:22})], {after:40});
+  body += P(d.name);
+  return XMLH +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' +
+    body +
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1418" w:bottom="1418" w:left="1418" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>' +
+    '</w:body></w:document>';
+}
+async function exportKuendigungDocx(d){
+  if(typeof JSZip === 'undefined'){ toast('JSZip konnte nicht geladen werden (Internetverbindung prüfen).'); return; }
+  const z = new JSZip();
+  z.file('[Content_Types].xml', CT_XML);
+  z.file('_rels/.rels', RELS_XML);
+  z.file('word/_rels/document.xml.rels', DOCRELS_XML);
+  z.file('word/styles.xml', STYLES_XML);
+  z.file('word/document.xml', buildKuendigungDocXml(d));
+  const blob = await z.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const g = (d.ges || 'Versicherer').replace(/[^\wäöüÄÖÜß\- ]/g,'').trim().replace(/\s+/g,'_');
+  downloadBlob(blob, 'Kuendigung_' + g + '_' + new Date().toISOString().slice(0,10) + '.docx');
+  toast('Kündigungsschreiben als Word-Datei erstellt.');
+}
 
 /* ---------- DOCX-Export (OOXML, ohne Server) ---------- */
 const XMLH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
@@ -1036,7 +1285,8 @@ function importJson(file){
     try{
       const s = JSON.parse(r.result);
       if(!s || !Array.isArray(s.policies)) throw new Error('bad');
-      state = { kunde: s.kunde || '', spalte: s.spalte || 'Anderer Versicherer', policies: s.policies };
+      state = { kunde: s.kunde || '', spalte: s.spalte || 'Anderer Versicherer', policies: s.policies,
+        absender: s.absender || {name:'',strasse:'',ort:''}, kOrtWahl: s.kOrtWahl || 'Röthenbach' };
       $('kunde').value = state.kunde;
       $('spalte').value = state.spalte;
       resetForm();
@@ -1076,15 +1326,32 @@ $('spalte').addEventListener('input', e => { state.spalte = e.target.value; rend
 $('sortSel').addEventListener('change', renderList);
 $('btnDocx').addEventListener('click', exportDocx);
 $('btnPreview').addEventListener('click', openPreview);
-$('btnPrint').addEventListener('click', () => window.print());
+$('btnPrint').addEventListener('click', () => { printMode = 'vergleich'; window.print(); });
 $('btnCloseOv').addEventListener('click', () => $('overlay').classList.remove('open'));
 $('overlay').addEventListener('click', e => { if(e.target.id==='overlay') $('overlay').classList.remove('open'); });
+$('kClose').addEventListener('click', () => $('kOverlay').classList.remove('open'));
+$('kOverlay').addEventListener('click', e => { if(e.target.id==='kOverlay') $('kOverlay').classList.remove('open'); });
+$('k_ortwahl').addEventListener('change', e => { $('kOrtCustomWrap').style.display = e.target.value==='__custom' ? '' : 'none'; });
+$('kDocx').addEventListener('click', () => {
+  const d = kCollect();
+  if(!d) return;
+  kLast = d;
+  exportKuendigungDocx(d);
+});
+$('kPrint').addEventListener('click', () => {
+  const d = kCollect();
+  if(!d) return;
+  kLast = d;
+  printMode = 'kuendigung';
+  $('printArea').innerHTML = buildKuendigungHtml();
+  window.print();
+});
 $('btnSave').addEventListener('click', exportJson);
 $('btnLoad').addEventListener('click', () => $('fileInput').click());
 $('fileInput').addEventListener('change', e => { if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=''; });
 $('btnNew').addEventListener('click', () => {
   if(!state.policies.length || confirm('Alle erfassten Daten verwerfen und neu beginnen?')){
-    state = { kunde:'', spalte:'Anderer Versicherer', policies:[] };
+    state = { kunde:'', spalte:'Anderer Versicherer', policies:[], absender:{name:'',strasse:'',ort:''}, kOrtWahl:'Röthenbach' };
     $('kunde').value = '';
     $('spalte').value = 'Anderer Versicherer';
     resetForm();
@@ -1092,7 +1359,7 @@ $('btnNew').addEventListener('click', () => {
   }
 });
 document.addEventListener('keydown', e => {
-  if(e.key==='Escape') $('overlay').classList.remove('open');
+  if(e.key==='Escape'){ $('overlay').classList.remove('open'); $('kOverlay').classList.remove('open'); }
 });
 
 /* ---------- Start ---------- */
