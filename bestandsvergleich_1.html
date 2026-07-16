@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bestandsvergleich · Beitragsübersicht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --ink:#14273F;
+  --muted:#5B6B80;
+  --paper:#F2F4F8;
+  --card:#FFFFFF;
+  --line:#D8DFE9;
+  --blau:#0E4DA4;
+  --blau-tief:#0B2F5E;
+  --blau-hell:#EAF1FB;
+  --gruen:#177245;
+  --gruen-bg:#E4F2EA;
+  --amber:#8F5400;
+  --amber-bg:#FCF0DA;
+  --rot:#A62B22;
+  --rot-bg:#FAE9E7;
+  --sans:'IBM Plex Sans',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Consolas,monospace;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(11,47,94,.06),0 8px 24px -12px rgba(11,47,94,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--sans)}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+:focus-visible{outline:2px solid var(--blau);outline-offset:2px}
+
+/* ---------- Kopfband ---------- */
+.top{background:var(--blau-tief);color:#fff;padding:14px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:baseline;gap:12px;min-width:0}
+.brand h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.brand small{font-size:12px;color:#9FB4D4;font-weight:400;letter-spacing:.02em}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:8px 14px;font-size:13.5px;font-weight:600;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--blau-hell);border-color:var(--blau)}
+.btn.primary{background:var(--blau);border-color:var(--blau);color:#fff}
+.btn.primary:hover{background:#0C4390}
+.btn.ghost{background:transparent;border-color:rgba(255,255,255,.35);color:#fff}
+.btn.ghost:hover{background:rgba(255,255,255,.12);border-color:#fff}
+.btn.small{padding:4px 10px;font-size:12.5px;font-weight:500}
+.btn.danger:hover{background:var(--rot-bg);border-color:var(--rot);color:var(--rot)}
+
+/* ---------- Aktendeckel / Kundenzeile ---------- */
+.casebar{background:var(--card);border-bottom:1px solid var(--line);padding:16px 22px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between}
+.case-left{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end}
+.field-inline label{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.field-inline input{border:none;border-bottom:2px solid var(--line);background:transparent;padding:4px 2px;font-size:18px;font-weight:600;min-width:240px}
+.field-inline input.sm{font-size:14px;font-weight:500;min-width:190px}
+.field-inline input:focus{border-bottom-color:var(--blau);outline:none}
+.case-az{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:right;line-height:1.7}
+
+/* ---------- Layout ---------- */
+.app{display:grid;grid-template-columns:430px 1fr;gap:20px;padding:20px 22px 120px;max-width:1400px;margin:0 auto;align-items:start}
+@media (max-width:980px){.app{grid-template-columns:1fr;padding-bottom:150px}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.panel-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.panel-h h2{margin:0;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.panel-b{padding:18px}
+
+/* ---------- Formular ---------- */
+.step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--blau);margin:20px 0 10px}
+.step:first-child{margin-top:0}
+.stepnum{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1.5px solid var(--blau);border-radius:50%;font-family:var(--mono);font-size:11px}
+.step .opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
+.sp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sp-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--ink);min-width:0;width:100%}
+.sp-chip .txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-chip .k{font-family:var(--mono);font-size:10.5px;font-weight:600;background:var(--blau-hell);color:var(--blau);border:1px solid #C4D6F0;border-radius:5px;padding:2px 5px;min-width:32px;text-align:center}
+.sp-chip:hover{border-color:var(--blau)}
+.sp-chip.on{border-color:var(--blau);background:var(--blau-hell);box-shadow:inset 0 0 0 1px var(--blau)}
+.sp-chip.on .k{background:var(--blau);color:#fff;border-color:var(--blau)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fgrid .wide{grid-column:1/-1}
+.f label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:#fff}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--blau);outline:none;box-shadow:0 0 0 3px rgba(14,77,164,.12)}
+.f textarea{resize:vertical;min-height:96px;line-height:1.45}
+.f .mono{font-family:var(--mono);font-size:13.5px}
+.hint{font-size:11.5px;color:var(--muted);margin-top:3px}
+.money-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.annual-note{font-family:var(--mono);font-size:12px;color:var(--gruen);margin-top:4px;min-height:16px}
+.rv-block{border:1px solid var(--line);border-radius:8px;padding:12px;margin-top:4px;background:#FBFCFE}
+.switch-row{display:flex;align-items:center;gap:10px}
+.switch{position:relative;width:40px;height:22px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
+.switch .tr{position:absolute;inset:0;background:#C6CFDC;border-radius:99px;transition:background .15s;pointer-events:none}
+.switch .tr::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked + .tr{background:var(--gruen)}
+.switch input:checked + .tr::after{transform:translateX(18px)}
+.rabatt-box{border-top:1px dashed var(--line);margin-top:14px;padding-top:12px}
+.r-title{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.r-title .opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0}
+.r-row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:end}
+.r-preview{font-family:var(--mono);font-size:12.5px;color:var(--ink);padding-bottom:9px;min-height:18px}
+.r-hint{margin-top:9px;font-size:12.5px;line-height:1.5;border-radius:7px;padding:8px 10px;display:none}
+.r-hint.warn{display:block;background:var(--amber-bg);color:var(--amber)}
+.r-hint.ok{display:block;background:var(--gruen-bg);color:var(--gruen)}
+.r-hint button{margin-left:6px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;cursor:pointer}
+.pm.r-inline .r-ctl{display:flex;align-items:center;gap:7px;font-size:12.5px;margin-top:2px}
+.pm.r-inline input[type=text]{width:58px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;text-align:right}
+.pm.r-inline input[type=text]:focus{border-color:var(--blau);outline:none}
+.pm.r-inline label{display:flex;align-items:center;gap:5px;color:var(--muted);font-weight:500;cursor:pointer;white-space:nowrap}
+.form-actions{display:flex;gap:10px;margin-top:22px}
+.form-actions .btn{flex:1;padding:11px}
+#btnCancelEdit{display:none}
+
+/* ---------- Liste ---------- */
+.list-toolbar{display:flex;gap:10px;align-items:center}
+.list-toolbar select{border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px;background:#fff}
+.empty{padding:44px 24px;text-align:center;color:var(--muted)}
+.empty .big{font-size:34px;margin-bottom:8px}
+.plist{display:flex;flex-direction:column;gap:12px;padding:16px}
+.pcard{border:1px solid var(--line);border-radius:9px;padding:13px 15px;background:#fff}
+.pcard-top{display:flex;align-items:flex-start;gap:10px}
+.pk{font-family:var(--mono);font-size:11px;font-weight:600;background:var(--blau-tief);color:#fff;border-radius:6px;padding:4px 7px;min-width:38px;text-align:center;flex:none}
+.pcard-title{font-weight:600;font-size:15px}
+.pcard-sub{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:1px;word-break:break-word}
+.pcard-actions{margin-left:auto;display:flex;gap:6px;flex:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{font-size:11.5px;font-weight:600;border-radius:6px;padding:3px 8px;background:var(--paper);color:var(--muted);border:1px solid var(--line)}
+.chip.warn{background:var(--amber-bg);color:var(--amber);border-color:#EAD3A6}
+.chip.hot{background:var(--rot-bg);color:var(--rot);border-color:#EFC4BF}
+.chip.save{background:var(--gruen-bg);color:var(--gruen);border-color:#BFE0CC}
+.pcard-money{display:flex;gap:22px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);flex-wrap:wrap}
+.pm .l{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pm .v{font-family:var(--mono);font-size:14.5px;font-weight:600}
+.pm .v.rv{color:var(--blau)}
+.pm .v.dash{color:#B3BDCB;font-weight:400}
+
+/* ---------- Bilanzleiste (Signatur) ---------- */
+.bilanz{position:fixed;left:0;right:0;bottom:0;background:var(--blau-tief);color:#fff;padding:12px 22px;display:flex;gap:34px;align-items:center;flex-wrap:wrap;box-shadow:0 -6px 24px rgba(11,47,94,.28);z-index:40}
+.bz .l{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8FA7CC}
+.bz .v{font-family:var(--mono);font-size:19px;font-weight:600}
+.bz .v.gr{color:#6FE0A8}
+.bz .v.rd{color:#FFB0A8}
+.bilanz .count{margin-left:auto;font-family:var(--mono);font-size:12.5px;color:#8FA7CC}
+@media (max-width:640px){.bilanz{gap:16px}.bz .v{font-size:16px}}
+
+/* ---------- Toast ---------- */
+#toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;padding:9px 18px;border-radius:8px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60;max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- Vorschau-Overlay ---------- */
+#overlay{position:fixed;inset:0;background:rgba(11,32,60,.55);z-index:50;display:none;overflow:auto;padding:26px 14px}
+#overlay.open{display:block}
+.ov-inner{max-width:860px;margin:0 auto}
+.ov-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px}
+.sheet{background:#fff;border-radius:6px;padding:34px 38px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+
+/* ---------- Druck-Ansicht ---------- */
+#printArea{display:none}
+.psheet h1{font-size:19pt;letter-spacing:.16em;margin:0 0 2px;font-weight:700}
+.psheet .fam{font-size:13pt;font-weight:700;margin:0 0 2px}
+.psheet .stand{font-family:var(--mono);font-size:9pt;color:#5B6B80;margin:0 0 14px}
+.ptable{width:100%;border-collapse:collapse;font-size:9.5pt;line-height:1.4}
+.ptable th,.ptable td{border:.75pt solid #7A8BA0;padding:6px 8px;vertical-align:top;text-align:left}
+.ptable th{background:#0E4DA4;color:#fff;font-size:9.5pt}
+.ptable th.meta-h{background:#EDF2F9;color:#42536B;font-weight:600}
+.pmeta{font-style:italic;width:27%}
+.pmeta .sp{font-weight:600}
+.pl{margin:0 0 2px}
+.pprice{font-weight:700;margin-top:4px}
+.pannual{font-size:8.5pt;color:#42536B}
+.ptotal td{background:#EDF2F9;font-weight:700}
+.psave td{font-weight:700;color:#177245}
+.ptable tr{page-break-inside:avoid}
+@media print{
+  body{background:#fff}
+  .top,.casebar,.app,.bilanz,#overlay,#toast{display:none !important}
+  #printArea{display:block}
+  @page{size:A4;margin:13mm}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <h1>Bestandsvergleich</h1>
+    <small>Beitrags- &amp; Leistungsübersicht · Fremdbestand vs. R+V</small>
+  </div>
+  <div class="top-actions">
+    <button class="btn ghost" id="btnLoad">Datei öffnen</button>
+    <button class="btn ghost" id="btnSave">Zwischenstand sichern</button>
+    <button class="btn ghost" id="btnNew">Neuer Kunde</button>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<div class="casebar">
+  <div class="case-left">
+    <div class="field-inline">
+      <label for="kunde">Kunde / Familie</label>
+      <input id="kunde" type="text" placeholder="Name" autocomplete="off">
+    </div>
+    <div class="field-inline">
+      <label for="spalte">Spaltentitel Fremdbestand</label>
+      <input id="spalte" class="sm" type="text" value="Anderer Versicherer" autocomplete="off">
+    </div>
+  </div>
+  <div class="case-az" id="caseAz"></div>
+</div>
+
+<main class="app">
+
+  <!-- ================= Erfassung ================= -->
+  <section class="panel" aria-label="Vertrag erfassen">
+    <div class="panel-h"><h2 id="formTitle">Vertrag erfassen</h2></div>
+    <div class="panel-b">
+
+      <div class="step"><span class="stepnum">1</span> Sparte wählen</div>
+      <div class="sp-grid" id="spGrid"></div>
+      <div class="f" id="labelWrap" style="display:none;margin-top:10px">
+        <label for="f_label">Bezeichnung der Sparte</label>
+        <input id="f_label" type="text" placeholder="z. B. Tierhalterhaftpflicht">
+      </div>
+
+      <div class="step"><span class="stepnum">2</span> Vertragsdaten</div>
+      <div class="fgrid">
+        <div class="f">
+          <label for="f_gesellschaft">Gesellschaft</label>
+          <input id="f_gesellschaft" type="text" list="gesellschaften" placeholder="z. B. Allianz" autocomplete="off">
+          <datalist id="gesellschaften">
+            <option>Allianz</option><option>AXA</option><option>ARAG</option><option>Barmenia</option>
+            <option>Debeka</option><option>Die Haftpflichtkasse</option><option>DKV</option>
+            <option>ERGO Versicherung AG</option><option>Generali</option><option>Gothaer</option>
+            <option>HUK-Coburg</option><option>HUK24</option><option>LVM</option><option>Nürnberger</option>
+            <option>Provinzial</option><option>Roland Rechtsschutz</option><option>Signal Iduna</option>
+            <option>VHV</option><option>Württembergische</option><option>WGV</option><option>Zurich</option>
+          </datalist>
+        </div>
+        <div class="f">
+          <label for="f_vsnr">Versicherungsnummer</label>
+          <input id="f_vsnr" class="mono" type="text" placeholder="123456789/U" autocomplete="off">
+        </div>
+        <div class="f">
+          <label for="f_ablauf">Ablaufdatum</label>
+          <input id="f_ablauf" type="date">
+          <div class="hint" id="fristHint"></div>
+        </div>
+        <div class="f">
+          <label for="f_personen">VN / versicherte Personen</label>
+          <input id="f_personen" type="text" placeholder="VN Name, VP Name">
+        </div>
+        <div class="f" id="kennzeichenWrap" style="display:none">
+          <label for="f_kennzeichen">Kfz-Kennzeichen</label>
+          <input id="f_kennzeichen" class="mono" type="text" placeholder="AB-CD 123">
+        </div>
+      </div>
+
+      <div class="step"><span class="stepnum">3</span> Bisheriger Vertrag</div>
+      <div class="f">
+        <label for="f_leist_f">Leistungen / Konditionen <span style="font-weight:400">(eine Angabe pro Zeile)</span></label>
+        <textarea id="f_leist_f" placeholder="150.000 EUR Invalidität&#10;Progression 350 %&#10;Krankenhaustagegeld&#10;Premium-Baustein"></textarea>
+      </div>
+      <div class="money-row" style="margin-top:10px">
+        <div class="f">
+          <label for="f_beitrag_f">Beitrag (€)</label>
+          <input id="f_beitrag_f" class="mono" type="text" inputmode="decimal" placeholder="89,90">
+        </div>
+        <div class="f">
+          <label for="f_zw_f">Zahlweise</label>
+          <select id="f_zw_f">
+            <option value="monatlich">monatlich</option>
+            <option value="vierteljaehrlich">vierteljährlich</option>
+            <option value="halbjaehrlich">halbjährlich</option>
+            <option value="jaehrlich" selected>jährlich</option>
+          </select>
+        </div>
+      </div>
+      <div class="annual-note" id="annualF"></div>
+
+      <div class="step"><span class="stepnum">4</span> R+V Angebot <span class="opt">— optional</span></div>
+      <div class="switch-row">
+        <span class="switch"><input type="checkbox" id="f_rv"><span class="tr"></span></span>
+        <label for="f_rv" style="font-size:13.5px;cursor:pointer">R+V Vergleichsangebot erfassen</label>
+      </div>
+      <div class="rv-block" id="rvBlock" style="display:none">
+        <div class="f">
+          <label for="f_leist_rv">Leistungen R+V</label>
+          <textarea id="f_leist_rv" placeholder="unbegrenzte VS&#10;Elementar&#10;SofortHilfe"></textarea>
+        </div>
+        <div class="money-row" style="margin-top:10px">
+          <div class="f">
+            <label for="f_beitrag_rv">Beitrag R+V (€)</label>
+            <input id="f_beitrag_rv" class="mono" type="text" inputmode="decimal" placeholder="79,90">
+          </div>
+          <div class="f">
+            <label for="f_zw_rv">Zahlweise</label>
+            <select id="f_zw_rv">
+              <option value="monatlich">monatlich</option>
+              <option value="vierteljaehrlich">vierteljährlich</option>
+              <option value="halbjaehrlich">halbjährlich</option>
+              <option value="jaehrlich" selected>jährlich</option>
+            </select>
+          </div>
+        </div>
+        <div class="annual-note" id="annualRV"></div>
+        <div class="rabatt-box">
+          <div class="r-title">Nachlass gegenrechnen <span class="opt">— intern, erscheint nie im Dokument</span></div>
+          <div class="r-row">
+            <div class="f">
+              <label for="f_rabatt">Nachlass (%)</label>
+              <input id="f_rabatt" class="mono" type="text" inputmode="decimal" placeholder="10">
+            </div>
+            <div class="r-preview" id="rabattPreview"></div>
+          </div>
+          <div class="switch-row" style="margin-top:10px">
+            <span class="switch"><input type="checkbox" id="f_rabatt_apply"><span class="tr"></span></span>
+            <label for="f_rabatt_apply" style="font-size:13px;cursor:pointer">In finalen Vorschlag übernehmen — Word/PDF zeigen nur den Endbeitrag</label>
+          </div>
+          <div class="r-hint" id="rabattHint"></div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn primary" id="btnAdd">Vertrag hinzufügen</button>
+        <button class="btn" id="btnCancelEdit">Abbrechen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Bestand ================= -->
+  <section class="panel" aria-label="Erfasster Bestand">
+    <div class="panel-h">
+      <h2>Bestand</h2>
+      <div class="list-toolbar">
+        <select id="sortSel" aria-label="Sortierung">
+          <option value="created">Reihenfolge: erfasst</option>
+          <option value="ablauf">Sortierung: Ablaufdatum</option>
+          <option value="sparte">Sortierung: Sparte</option>
+          <option value="gesellschaft">Sortierung: Gesellschaft</option>
+        </select>
+        <button class="btn small" id="btnPreview">Vorschau &amp; PDF</button>
+        <button class="btn small primary" id="btnDocx">Word (.docx)</button>
+      </div>
+    </div>
+    <div id="listWrap">
+      <div class="empty" id="emptyState">
+        <div class="big">📇</div>
+        <strong>Noch keine Verträge erfasst.</strong><br>
+        Links Sparte wählen, Daten eintragen, hinzufügen — die Übersicht<br>und die Jahresbilanz bauen sich hier automatisch auf.
+      </div>
+      <div class="plist" id="plist"></div>
+    </div>
+  </section>
+</main>
+
+<!-- ================= Bilanzleiste ================= -->
+<footer class="bilanz" aria-label="Jahresbilanz">
+  <div class="bz"><div class="l" id="bzFremdL">Bisher / Jahr</div><div class="v" id="bzFremd">0,00 €</div></div>
+  <div class="bz"><div class="l">R+V / Jahr</div><div class="v" id="bzRV">0,00 €</div></div>
+  <div class="bz"><div class="l">Ersparnis / Jahr · verglichene Verträge</div><div class="v gr" id="bzSave">—</div></div>
+  <div class="count" id="bzCount">0 Verträge</div>
+</footer>
+
+<div id="toast" role="status"></div>
+
+<!-- ================= Vorschau ================= -->
+<div id="overlay">
+  <div class="ov-inner">
+    <div class="ov-bar">
+      <button class="btn ghost" id="btnPrint">Drucken / als PDF speichern</button>
+      <button class="btn ghost" id="btnCloseOv">Schließen</button>
+    </div>
+    <div class="sheet" id="previewSheet"></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+'use strict';
+/* =============================================================
+   Bestandsvergleich — Fremdbestand vs. R+V
+   Einzeldatei-Werkzeug für GitHub Pages. Alle Daten bleiben im
+   Browser; Export als .docx (Word) und PDF (Druckdialog).
+   ============================================================= */
+
+const SPARTEN = [
+  {id:'phv', k:'PHV', name:'Privathaftpflicht', full:'Privathaftpflichtversicherung'},
+  {id:'wg',  k:'WG',  name:'Wohngebäude',       full:'Wohngebäudeversicherung'},
+  {id:'hr',  k:'HR',  name:'Hausrat',           full:'Hausratversicherung'},
+  {id:'rs',  k:'RS',  name:'Rechtsschutz',      full:'Rechtsschutzversicherung'},
+  {id:'uv',  k:'UV',  name:'Unfall',            full:'Unfallversicherung'},
+  {id:'bu',  k:'BU',  name:'Berufsunfähigkeit', full:'Berufsunfähigkeitsversicherung'},
+  {id:'gl',  k:'GL',  name:'Glas',              full:'Glasversicherung'},
+  {id:'kfz', k:'KFZ', name:'Kfz',               full:'Kfz-Versicherung'},
+  {id:'kzv', k:'KZV', name:'Krankenzusatz',     full:'Krankenzusatzversicherung'},
+  {id:'so',  k:'SO',  name:'Sonstige',          full:'Sonstiger Vertrag'}
+];
+const ZW = {
+  monatlich:{f:12, l:'monatlich'},
+  vierteljaehrlich:{f:4, l:'vierteljährlich'},
+  halbjaehrlich:{f:2, l:'halbjährlich'},
+  jaehrlich:{f:1, l:'jährlich'}
+};
+
+let state = { kunde:'', spalte:'Anderer Versicherer', policies:[] };
+let selectedSparte = null;
+let editId = null;
+
+/* ---------- Speicher (nur wenn verfügbar; sonst rein im Arbeitsspeicher) ---------- */
+const store = (() => {
+  try {
+    const t = window.localStorage;
+    t.setItem('__bv_t','1'); t.removeItem('__bv_t');
+    return t;
+  } catch(e){ return null; }
+})();
+const STORE_KEY = 'bestandsvergleich_v1';
+function autosave(){ if(store){ try{ store.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} } }
+function restore(){
+  if(!store) return;
+  try{
+    const raw = store.getItem(STORE_KEY);
+    if(raw){ const s = JSON.parse(raw); if(s && Array.isArray(s.policies)) state = s; }
+  }catch(e){}
+}
+
+/* ---------- Helfer ---------- */
+const $ = id => document.getElementById(id);
+const eurFmt = new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'});
+function fmtEur(n){ return (n==null || isNaN(n)) ? '—' : eurFmt.format(n); }
+function parseEuro(v){
+  if(v==null) return null;
+  let s = String(v).replace(/[€\s]/g,'');
+  if(!s) return null;
+  if(s.includes(',')) s = s.replace(/\./g,'').replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+function fmtNum(n){ return n==null ? '' : n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function parsePct(v){
+  if(v==null) return null;
+  let s = String(v).replace(/[%\s]/g,'').replace(',', '.');
+  if(!s) return null;
+  const n = parseFloat(s);
+  if(isNaN(n)) return null;
+  return Math.max(0, Math.min(100, n));
+}
+function fmtPct(n){ return Number.isInteger(n) ? String(n) : n.toLocaleString('de-DE',{maximumFractionDigits:2}); }
+function round2(n){ return Math.round(n * 100) / 100; }
+function rvEffective(p){
+  if(p.beitragRV==null) return null;
+  if(p.rabattApply && p.rabatt>0) return round2(p.beitragRV * (1 - p.rabatt/100));
+  return p.beitragRV;
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if(isNaN(d)) return iso;
+  return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function todayStr(){ return new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function annual(p, side){
+  const b = side==='rv' ? rvEffective(p) : p.beitragF;
+  const z = side==='rv' ? p.zwRV : p.zwF;
+  if(b==null || !ZW[z]) return null;
+  return b * ZW[z].f;
+}
+function sparteOf(p){ return SPARTEN.find(s => s.id===p.sparte) || SPARTEN[SPARTEN.length-1]; }
+function displayName(p){
+  if(p.sparte==='so' && p.label) return p.label;
+  return sparteOf(p).full;
+}
+function fristDate(p){
+  if(!p.ablauf) return null;
+  const d = new Date(p.ablauf + 'T00:00:00');
+  if(isNaN(d)) return null;
+  d.setMonth(d.getMonth() - (p.sparte==='kfz' ? 1 : 3));
+  return d;
+}
+function monthsLeft(iso){
+  if(!iso) return null;
+  const d = new Date(iso + 'T00:00:00');
+  if(isNaN(d)) return null;
+  return (d - new Date()) / (30.44 * 864e5);
+}
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function esc(s){
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+/* ---------- Spartenauswahl ---------- */
+function buildSpGrid(){
+  const g = $('spGrid');
+  g.innerHTML = '';
+  SPARTEN.forEach(s => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sp-chip';
+    b.dataset.id = s.id;
+    b.innerHTML = '<span class="k">' + s.k + '</span><span class="txt">' + s.name + '</span>';
+    b.title = s.name;
+    b.addEventListener('click', () => selectSparte(s.id));
+    g.appendChild(b);
+  });
+}
+function selectSparte(id){
+  selectedSparte = id;
+  document.querySelectorAll('.sp-chip').forEach(c => c.classList.toggle('on', c.dataset.id===id));
+  $('kennzeichenWrap').style.display = id==='kfz' ? '' : 'none';
+  $('labelWrap').style.display = id==='so' ? '' : 'none';
+}
+
+/* ---------- Formular ---------- */
+function updateAnnualNotes(){
+  const bf = parseEuro($('f_beitrag_f').value);
+  const zf = ZW[$('f_zw_f').value];
+  $('annualF').textContent = (bf!=null && zf) ? '≙ ' + fmtNum(bf*zf.f) + ' € / Jahr' : '';
+  const br = parseEuro($('f_beitrag_rv').value);
+  const zr = ZW[$('f_zw_rv').value];
+  $('annualRV').textContent = (br!=null && zr) ? '≙ ' + fmtNum(br*zr.f) + ' € / Jahr' : '';
+}
+function updateFristHint(){
+  const iso = $('f_ablauf').value;
+  const el = $('fristHint');
+  if(!iso){ el.textContent=''; return; }
+  const p = { ablauf: iso, sparte: selectedSparte };
+  const f = fristDate(p);
+  el.textContent = f ? 'Kündigung i. d. R. bis ' + f.toLocaleDateString('de-DE') + ' (Richtwert, ' + (selectedSparte==='kfz'?'1 Monat':'3 Monate') + ' vor Ablauf)' : '';
+}
+function neededPct(annualF, annualRVraw){
+  if(annualF==null || annualRVraw==null || annualRVraw<=0 || annualRVraw<=annualF) return null;
+  return Math.min(99, Math.ceil((1 - annualF/annualRVraw) * 100));
+}
+function updateRabattUI(){
+  const prev = $('rabattPreview'), hint = $('rabattHint');
+  const bR = parseEuro($('f_beitrag_rv').value), zR = ZW[$('f_zw_rv').value];
+  const bF = parseEuro($('f_beitrag_f').value), zF = ZW[$('f_zw_f').value];
+  const r = parsePct($('f_rabatt').value);
+  const apply = $('f_rabatt_apply').checked;
+  // Live-Vorschau des Nachlasses
+  if(bR!=null && r!=null && r>0){
+    const disc = round2(bR * (1 - r/100));
+    prev.textContent = '− ' + fmtNum(bR - disc) + ' € → ' + fmtNum(disc) + ' € ' + zR.l +
+      (zR.f!==1 ? ' ≙ ' + fmtNum(disc * zR.f) + ' €/Jahr' : '');
+  } else {
+    prev.textContent = '';
+  }
+  // Automatischer Hinweis: nötiger Nachlass, wenn R+V teurer ist
+  hint.className = 'r-hint';
+  hint.textContent = '';
+  if(bR!=null && bF!=null){
+    const aF = bF * zF.f;
+    const aRraw = bR * zR.f;
+    const eff = (apply && r>0) ? round2(bR * (1 - r/100)) : bR;
+    const aEff = eff * zR.f;
+    if(aEff > aF + 0.005){
+      const need = neededPct(aF, aRraw);
+      if(need!=null){
+        const target = round2(bR * (1 - need/100));
+        hint.className = 'r-hint warn';
+        hint.append('R+V liegt aktuell ' + fmtNum(aEff - aF) + ' €/Jahr über dem Fremdbeitrag. Nötig wären ' +
+          need + ' % Nachlass → ' + fmtNum(target * zR.f) + ' €/Jahr. ');
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = need + ' % eintragen';
+        b.addEventListener('click', () => {
+          $('f_rabatt').value = String(need);
+          $('f_rabatt_apply').checked = true;
+          updateRabattUI();
+        });
+        hint.appendChild(b);
+      }
+    } else if(apply && r>0){
+      hint.className = 'r-hint ok';
+      hint.textContent = 'Mit ' + fmtPct(r) + ' % Nachlass liegt R+V bei ' + fmtNum(aEff) + ' €/Jahr — ' +
+        fmtNum(aF - aEff) + ' € unter dem Fremdbeitrag.';
+    }
+  }
+}
+function collectForm(){
+  if(!selectedSparte){ toast('Bitte zuerst eine Sparte wählen.'); return null; }
+  const p = {
+    id: editId || ('p' + Date.now() + Math.random().toString(36).slice(2,6)),
+    created: Date.now(),
+    sparte: selectedSparte,
+    label: $('f_label').value.trim(),
+    gesellschaft: $('f_gesellschaft').value.trim(),
+    vsnr: $('f_vsnr').value.trim(),
+    ablauf: $('f_ablauf').value,
+    personen: $('f_personen').value.trim(),
+    kennzeichen: $('f_kennzeichen').value.trim(),
+    leistF: $('f_leist_f').value.trim(),
+    beitragF: parseEuro($('f_beitrag_f').value),
+    zwF: $('f_zw_f').value,
+    rv: $('f_rv').checked,
+    leistRV: $('f_leist_rv').value.trim(),
+    beitragRV: parseEuro($('f_beitrag_rv').value),
+    zwRV: $('f_zw_rv').value,
+    rabatt: parsePct($('f_rabatt').value),
+    rabattApply: $('f_rabatt_apply').checked
+  };
+  if(!p.rv){ p.leistRV=''; p.beitragRV=null; p.rabatt=null; }
+  if(p.rabatt!=null && p.rabatt<=0) p.rabatt = null;
+  if(p.rabatt==null || p.beitragRV==null) p.rabattApply = false;
+  return p;
+}
+function fillForm(p){
+  selectSparte(p.sparte);
+  $('f_label').value = p.label || '';
+  $('f_gesellschaft').value = p.gesellschaft || '';
+  $('f_vsnr').value = p.vsnr || '';
+  $('f_ablauf').value = p.ablauf || '';
+  $('f_personen').value = p.personen || '';
+  $('f_kennzeichen').value = p.kennzeichen || '';
+  $('f_leist_f').value = p.leistF || '';
+  $('f_beitrag_f').value = p.beitragF!=null ? fmtNum(p.beitragF) : '';
+  $('f_zw_f').value = p.zwF || 'jaehrlich';
+  $('f_rv').checked = !!p.rv;
+  $('rvBlock').style.display = p.rv ? '' : 'none';
+  $('f_leist_rv').value = p.leistRV || '';
+  $('f_beitrag_rv').value = p.beitragRV!=null ? fmtNum(p.beitragRV) : '';
+  $('f_zw_rv').value = p.zwRV || 'jaehrlich';
+  $('f_rabatt').value = p.rabatt!=null ? fmtPct(p.rabatt) : '';
+  $('f_rabatt_apply').checked = !!p.rabattApply;
+  updateAnnualNotes();
+  updateFristHint();
+  updateRabattUI();
+}
+function resetForm(){
+  editId = null;
+  selectedSparte = null;
+  document.querySelectorAll('.sp-chip').forEach(c => c.classList.remove('on'));
+  ['f_label','f_gesellschaft','f_vsnr','f_ablauf','f_personen','f_kennzeichen','f_leist_f','f_beitrag_f','f_leist_rv','f_beitrag_rv','f_rabatt']
+    .forEach(id => $(id).value = '');
+  $('f_zw_f').value = 'jaehrlich';
+  $('f_zw_rv').value = 'jaehrlich';
+  $('f_rv').checked = false;
+  $('f_rabatt_apply').checked = false;
+  $('rabattPreview').textContent = '';
+  const rh = $('rabattHint'); rh.className = 'r-hint'; rh.textContent = '';
+  $('rvBlock').style.display = 'none';
+  $('kennzeichenWrap').style.display = 'none';
+  $('labelWrap').style.display = 'none';
+  $('annualF').textContent = '';
+  $('annualRV').textContent = '';
+  $('fristHint').textContent = '';
+  $('formTitle').textContent = 'Vertrag erfassen';
+  $('btnAdd').textContent = 'Vertrag hinzufügen';
+  $('btnCancelEdit').style.display = 'none';
+}
+function startEdit(id){
+  const p = state.policies.find(x => x.id===id);
+  if(!p) return;
+  editId = id;
+  fillForm(p);
+  $('formTitle').textContent = 'Vertrag bearbeiten';
+  $('btnAdd').textContent = 'Änderungen speichern';
+  $('btnCancelEdit').style.display = '';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* ---------- Bestand rendern ---------- */
+function sortedPolicies(){
+  const arr = [...state.policies];
+  const mode = $('sortSel').value;
+  if(mode==='ablauf') arr.sort((a,b) => (a.ablauf||'9999').localeCompare(b.ablauf||'9999'));
+  else if(mode==='sparte') arr.sort((a,b) => SPARTEN.findIndex(s=>s.id===a.sparte) - SPARTEN.findIndex(s=>s.id===b.sparte));
+  else if(mode==='gesellschaft') arr.sort((a,b) => (a.gesellschaft||'').localeCompare(b.gesellschaft||'', 'de'));
+  else arr.sort((a,b) => a.created - b.created);
+  return arr;
+}
+function renderList(){
+  const list = $('plist');
+  const arr = sortedPolicies();
+  $('emptyState').style.display = arr.length ? 'none' : '';
+  list.innerHTML = '';
+  arr.forEach(p => {
+    const s = sparteOf(p);
+    const aF = annual(p,'f');
+    const aR = annual(p,'rv');
+    const saving = (aF!=null && aR!=null) ? aF - aR : null;
+    const ml = monthsLeft(p.ablauf);
+    const frist = fristDate(p);
+
+    const subParts = [];
+    if(p.gesellschaft) subParts.push(esc(p.gesellschaft));
+    if(p.vsnr) subParts.push(esc(p.vsnr));
+    if(p.kennzeichen) subParts.push(esc(p.kennzeichen));
+
+    let chips = '';
+    if(p.ablauf){
+      const cls = ml!=null && ml<=2 ? 'hot' : (ml!=null && ml<=5 ? 'warn' : '');
+      chips += '<span class="chip ' + cls + '">Ablauf ' + fmtDate(p.ablauf) + '</span>';
+      if(frist) chips += '<span class="chip">Frist ≈ ' + frist.toLocaleDateString('de-DE') + '</span>';
+    }
+    if(p.personen) chips += '<span class="chip">' + esc(p.personen) + '</span>';
+    if(saving!=null && saving>0) chips += '<span class="chip save">Ersparnis ' + fmtNum(saving) + ' €/Jahr</span>';
+    if(p.rabattApply && p.rabatt>0) chips += '<span class="chip save">Nachlass ' + fmtPct(p.rabatt) + ' % · intern</span>';
+    if(aF!=null && aR!=null && aR > aF + 0.005 && p.beitragRV!=null){
+      const need = neededPct(aF, p.beitragRV * ZW[p.zwRV].f);
+      if(need!=null) chips += '<span class="chip warn">R+V + ' + fmtNum(aR - aF) + ' €/Jahr · Vorschlag: ' + need + ' % Nachlass</span>';
+    }
+
+    const rabCtl = p.beitragRV==null ? '' :
+      '<div class="pm r-inline"><div class="l">Nachlass · intern</div>' +
+        '<div class="r-ctl">' +
+          '<input data-act="rab" type="text" inputmode="decimal" value="' + (p.rabatt!=null ? esc(fmtPct(p.rabatt)) : '') + '" aria-label="Nachlass in Prozent">' +
+          '<span>%</span>' +
+          '<label><input data-act="rabapply" type="checkbox"' + (p.rabattApply ? ' checked' : '') + '> übernehmen</label>' +
+        '</div></div>';
+
+    const card = document.createElement('article');
+    card.className = 'pcard';
+    card.innerHTML =
+      '<div class="pcard-top">' +
+        '<span class="pk">' + s.k + '</span>' +
+        '<div><div class="pcard-title">' + esc(displayName(p)) + '</div>' +
+        '<div class="pcard-sub">' + (subParts.join(' · ') || '<span style="font-style:italic">ohne Angaben</span>') + '</div></div>' +
+        '<div class="pcard-actions">' +
+          '<button class="btn small" data-act="edit">Bearbeiten</button>' +
+          '<button class="btn small" data-act="dup" title="Duplizieren">⧉</button>' +
+          '<button class="btn small danger" data-act="del" title="Löschen">✕</button>' +
+        '</div>' +
+      '</div>' +
+      (chips ? '<div class="chips">' + chips + '</div>' : '') +
+      '<div class="pcard-money">' +
+        '<div class="pm"><div class="l">Bisher / Jahr</div><div class="v' + (aF==null?' dash':'') + '">' + (aF==null?'—':fmtNum(aF)+' €') + '</div></div>' +
+        '<div class="pm"><div class="l">R+V / Jahr</div><div class="v rv' + (aR==null?' dash':'') + '">' + (aR==null?'—':fmtNum(aR)+' €') + '</div></div>' +
+        rabCtl +
+      '</div>';
+    card.querySelector('[data-act="edit"]').addEventListener('click', () => startEdit(p.id));
+    const rabIn = card.querySelector('[data-act="rab"]');
+    if(rabIn){
+      rabIn.addEventListener('change', e => {
+        const v = parsePct(e.target.value);
+        p.rabatt = (v!=null && v>0) ? v : null;
+        if(p.rabatt==null) p.rabattApply = false;
+        if(editId===p.id) fillForm(p);
+        renderAll();
+      });
+      card.querySelector('[data-act="rabapply"]').addEventListener('change', e => {
+        p.rabattApply = e.target.checked && p.rabatt!=null && p.rabatt>0;
+        if(e.target.checked && (p.rabatt==null || p.rabatt<=0)){ e.target.checked = false; toast('Bitte zuerst einen Nachlass in % eintragen.'); }
+        if(editId===p.id) fillForm(p);
+        renderAll();
+      });
+    }
+    card.querySelector('[data-act="dup"]').addEventListener('click', () => {
+      const c = JSON.parse(JSON.stringify(p));
+      c.id = 'p' + Date.now() + Math.random().toString(36).slice(2,6);
+      c.created = Date.now();
+      state.policies.push(c);
+      renderAll();
+      toast('Vertrag dupliziert.');
+    });
+    card.querySelector('[data-act="del"]').addEventListener('click', () => {
+      if(confirm('Diesen Vertrag wirklich löschen?')){
+        state.policies = state.policies.filter(x => x.id!==p.id);
+        if(editId===p.id) resetForm();
+        renderAll();
+        toast('Vertrag gelöscht.');
+      }
+    });
+    list.appendChild(card);
+  });
+}
+function totals(){
+  let f=0, r=0, save=0, hasF=false, hasR=false, hasSave=false;
+  state.policies.forEach(p => {
+    const aF = annual(p,'f'), aR = annual(p,'rv');
+    if(aF!=null){ f+=aF; hasF=true; }
+    if(aR!=null){ r+=aR; hasR=true; }
+    if(aF!=null && aR!=null){ save += aF-aR; hasSave=true; }
+  });
+  return { f:hasF?f:null, r:hasR?r:null, save:hasSave?save:null };
+}
+function renderBilanz(){
+  const t = totals();
+  $('bzFremdL').textContent = (state.spalte || 'Bisher') + ' / Jahr';
+  $('bzFremd').textContent = t.f==null ? '—' : fmtNum(t.f) + ' €';
+  $('bzRV').textContent = t.r==null ? '—' : fmtNum(t.r) + ' €';
+  const sv = $('bzSave');
+  if(t.save==null){ sv.textContent='—'; sv.className='v gr'; }
+  else {
+    sv.textContent = (t.save>=0?'−':'+') + ' ' + fmtNum(Math.abs(t.save)) + ' €';
+    sv.className = 'v ' + (t.save>=0 ? 'gr' : 'rd');
+  }
+  const n = state.policies.length;
+  $('bzCount').textContent = n + (n===1 ? ' Vertrag' : ' Verträge');
+}
+function renderCaseBar(){
+  $('caseAz').innerHTML = 'Stand ' + todayStr() + '<br>' + state.policies.length + ' Verträge erfasst';
+}
+function renderAll(){
+  renderList();
+  renderBilanz();
+  renderCaseBar();
+  autosave();
+}
+
+/* ---------- Druck- / PDF-Ansicht ---------- */
+function metaLines(p){
+  const lines = [];
+  lines.push({t: displayName(p), sp:true});
+  if(p.kennzeichen) lines.push({t:p.kennzeichen});
+  if(p.gesellschaft) lines.push({t:p.gesellschaft});
+  if(p.vsnr) lines.push({t:p.vsnr});
+  if(p.ablauf) lines.push({t:fmtDate(p.ablauf)});
+  if(p.personen) lines.push({t:p.personen});
+  return lines;
+}
+function contentHtml(p, side){
+  const leist = side==='rv' ? p.leistRV : p.leistF;
+  const b = side==='rv' ? rvEffective(p) : p.beitragF;
+  const z = side==='rv' ? p.zwRV : p.zwF;
+  let h = '';
+  if(leist) h += leist.split(/\r?\n/).filter(x=>x.trim()).map(l => '<p class="pl">' + esc(l) + '</p>').join('');
+  if(b!=null){
+    h += '<p class="pl pprice">' + fmtNum(b) + ' € ' + ZW[z].l + '</p>';
+    if(z!=='jaehrlich') h += '<p class="pl pannual">≙ ' + fmtNum(b*ZW[z].f) + ' € / Jahr</p>';
+  }
+  return h;
+}
+function buildPrintHtml(){
+  const t = totals();
+  const arr = sortedPolicies();
+  let rows = '';
+  arr.forEach(p => {
+    const meta = metaLines(p).map(l => '<p class="pl' + (l.sp?' sp':'') + '">' + esc(l.t) + '</p>').join('');
+    rows += '<tr><td class="pmeta">' + meta + '</td><td>' + (contentHtml(p,'f')||'') + '</td><td>' + (contentHtml(p,'rv')||'') + '</td></tr>';
+  });
+  let totalRow = '<tr class="ptotal"><td>Gesamtsumme / Jahr</td>' +
+    '<td>' + (t.f==null?'':fmtNum(t.f)+' €') + '</td>' +
+    '<td>' + (t.r==null?'':fmtNum(t.r)+' €') + '</td></tr>';
+  let saveRow = '';
+  if(t.save!=null){
+    saveRow = '<tr class="psave"><td colspan="2">Ersparnis / Jahr (verglichene Verträge)</td>' +
+      '<td>' + (t.save>=0?'':'−') + fmtNum(Math.abs(t.save)) + ' €' + (t.save<0?' Mehrbeitrag':'') + '</td></tr>';
+  }
+  return '<div class="psheet">' +
+    '<h1>BEITRÄGE</h1>' +
+    (state.kunde ? '<p class="fam">' + esc(state.kunde) + '</p>' : '') +
+    '<p class="stand">Stand ' + todayStr() + ' · ' + arr.length + ' Verträge</p>' +
+    '<table class="ptable"><colgroup><col style="width:27%"><col style="width:36.5%"><col style="width:36.5%"></colgroup>' +
+    '<tr><th class="meta-h">Vertrag</th><th>' + esc(state.spalte || 'Anderer Versicherer') + '</th><th>R+V</th></tr>' +
+    rows + totalRow + saveRow +
+    '</table></div>';
+}
+function openPreview(){
+  if(!state.policies.length){ toast('Noch keine Verträge erfasst.'); return; }
+  const html = buildPrintHtml();
+  $('previewSheet').innerHTML = html;
+  $('printArea').innerHTML = html;
+  $('overlay').classList.add('open');
+}
+window.addEventListener('beforeprint', () => { $('printArea').innerHTML = buildPrintHtml(); });
+
+/* ---------- DOCX-Export (OOXML, ohne Server) ---------- */
+const XMLH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+function xEsc(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function wRun(text, o){
+  o = o || {};
+  const pr = [];
+  if(o.b) pr.push('<w:b/>');
+  if(o.i) pr.push('<w:i/>');
+  if(o.color) pr.push('<w:color w:val="' + o.color + '"/>');
+  if(o.sz) pr.push('<w:sz w:val="' + o.sz + '"/><w:szCs w:val="' + o.sz + '"/>');
+  return '<w:r>' + (pr.length ? '<w:rPr>' + pr.join('') + '</w:rPr>' : '') +
+    '<w:t xml:space="preserve">' + xEsc(text) + '</w:t></w:r>';
+}
+function wP(runs, o){
+  o = o || {};
+  const pPr = [];
+  pPr.push('<w:spacing w:before="' + (o.before||0) + '" w:after="' + (o.after!=null?o.after:40) + '" w:line="240" w:lineRule="auto"/>');
+  if(o.align) pPr.push('<w:jc w:val="' + o.align + '"/>');
+  return '<w:p><w:pPr>' + pPr.join('') + '</w:pPr>' + (Array.isArray(runs) ? runs.join('') : runs) + '</w:p>';
+}
+function wTc(paras, width, o){
+  o = o || {};
+  const pr = ['<w:tcW w:w="' + width + '" w:type="dxa"/>'];
+  if(o.fill) pr.push('<w:shd w:val="clear" w:color="auto" w:fill="' + o.fill + '"/>');
+  if(o.span) pr.push('<w:gridSpan w:val="' + o.span + '"/>');
+  pr.push('<w:vAlign w:val="top"/>');
+  const body = (paras && paras.length) ? paras.join('') : wP([wRun('')]);
+  return '<w:tc><w:tcPr>' + pr.join('') + '</w:tcPr>' + body + '</w:tc>';
+}
+function docContentParas(p, side){
+  const leist = side==='rv' ? p.leistRV : p.leistF;
+  const b = side==='rv' ? rvEffective(p) : p.beitragF;
+  const z = side==='rv' ? p.zwRV : p.zwF;
+  const paras = [];
+  if(leist) leist.split(/\r?\n/).filter(x=>x.trim()).forEach(l => paras.push(wP([wRun(l)])));
+  if(b!=null){
+    paras.push(wP([wRun(fmtNum(b) + ' € ' + ZW[z].l, {b:true})], {before:60}));
+    if(z!=='jaehrlich') paras.push(wP([wRun('≙ ' + fmtNum(b*ZW[z].f) + ' € / Jahr', {sz:17, color:'44546A'})]));
+  }
+  return paras;
+}
+function buildDocumentXml(){
+  const W1 = 2700, W2 = 3469, W3 = 3469;
+  const t = totals();
+  const arr = sortedPolicies();
+
+  let rows = '';
+  // Kopfzeile
+  rows += '<w:tr>' +
+    wTc([wP([wRun('Vertrag', {b:true, color:'44546A'})])], W1, {fill:'EDF2F9'}) +
+    wTc([wP([wRun(state.spalte || 'Anderer Versicherer', {b:true, color:'FFFFFF'})])], W2, {fill:'0E4DA4'}) +
+    wTc([wP([wRun('R+V', {b:true, color:'FFFFFF'})])], W3, {fill:'0E4DA4'}) +
+    '</w:tr>';
+  // Verträge
+  arr.forEach(p => {
+    const meta = metaLines(p).map(l => wP([wRun(l.t, {i:true, b:!!l.sp})]));
+    rows += '<w:tr>' +
+      wTc(meta, W1) +
+      wTc(docContentParas(p,'f'), W2) +
+      wTc(docContentParas(p,'rv'), W3) +
+      '</w:tr>';
+  });
+  // Gesamtsumme
+  rows += '<w:tr>' +
+    wTc([wP([wRun('Gesamtsumme / Jahr', {b:true})])], W1, {fill:'EDF2F9'}) +
+    wTc([wP([wRun(t.f==null ? '' : fmtNum(t.f) + ' €', {b:true})])], W2, {fill:'EDF2F9'}) +
+    wTc([wP([wRun(t.r==null ? '' : fmtNum(t.r) + ' €', {b:true})])], W3, {fill:'EDF2F9'}) +
+    '</w:tr>';
+  // Ersparnis
+  if(t.save!=null){
+    const txt = (t.save<0 ? '−' : '') + fmtNum(Math.abs(t.save)) + ' €' + (t.save<0 ? ' Mehrbeitrag' : '');
+    rows += '<w:tr>' +
+      wTc([wP([wRun('Ersparnis / Jahr (verglichene Verträge)', {b:true})])], W1 + W2, {span:2}) +
+      wTc([wP([wRun(txt, {b:true, color: t.save>=0 ? '177245' : 'A62B22'})])], W3) +
+      '</w:tr>';
+  }
+
+  const borders =
+    '<w:tblBorders>' +
+      '<w:top w:val="single" w:sz="6" w:space="0" w:color="7A8BA0"/>' +
+      '<w:left w:val="single" w:sz="6" w:space="0" w:color="7A8BA0"/>' +
+      '<w:bottom w:val="single" w:sz="6" w:space="0" w:color="7A8BA0"/>' +
+      '<w:right w:val="single" w:sz="6" w:space="0" w:color="7A8BA0"/>' +
+      '<w:insideH w:val="single" w:sz="6" w:space="0" w:color="7A8BA0"/>' +
+      '<w:insideV w:val="single" w:sz="6" w:space="0" w:color="7A8BA0"/>' +
+    '</w:tblBorders>';
+
+  return XMLH +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' +
+    wP([wRun('BEITRÄGE', {b:true, sz:34})], {after:60}) +
+    (state.kunde ? wP([wRun(state.kunde, {b:true, sz:26})], {after:40}) : '') +
+    wP([wRun('Stand ' + todayStr() + ' · ' + arr.length + ' Verträge', {sz:17, color:'44546A'})], {after:160}) +
+    '<w:tbl><w:tblPr><w:tblW w:w="' + (W1+W2+W3) + '" w:type="dxa"/>' + borders +
+    '<w:tblCellMar><w:top w:w="80" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar>' +
+    '<w:tblLayout w:type="fixed"/></w:tblPr>' +
+    '<w:tblGrid><w:gridCol w:w="' + W1 + '"/><w:gridCol w:w="' + W2 + '"/><w:gridCol w:w="' + W3 + '"/></w:tblGrid>' +
+    rows +
+    '</w:tbl>' +
+    '<w:p/>' +
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>' +
+    '</w:body></w:document>';
+}
+const CT_XML = XMLH +
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+  '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+  '<Default Extension="xml" ContentType="application/xml"/>' +
+  '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+  '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+  '</Types>';
+const RELS_XML = XMLH +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+  '</Relationships>';
+const DOCRELS_XML = XMLH +
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+  '</Relationships>';
+const STYLES_XML = XMLH +
+  '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+  '<w:docDefaults><w:rPrDefault><w:rPr>' +
+  '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>' +
+  '<w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="de-DE"/>' +
+  '</w:rPr></w:rPrDefault>' +
+  '<w:pPrDefault><w:pPr><w:spacing w:after="40" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+  '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
+  '</w:styles>';
+
+function fileName(ext){
+  const k = (state.kunde || 'Kunde').replace(/[^\wäöüÄÖÜß\- ]/g,'').trim().replace(/\s+/g,'_');
+  const d = new Date().toISOString().slice(0,10);
+  return 'Bestandsvergleich_' + k + '_' + d + '.' + ext;
+}
+function downloadBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+async function exportDocx(){
+  if(!state.policies.length){ toast('Noch keine Verträge erfasst.'); return; }
+  if(typeof JSZip === 'undefined'){ toast('JSZip konnte nicht geladen werden (Internetverbindung prüfen).'); return; }
+  const z = new JSZip();
+  z.file('[Content_Types].xml', CT_XML);
+  z.file('_rels/.rels', RELS_XML);
+  z.file('word/_rels/document.xml.rels', DOCRELS_XML);
+  z.file('word/styles.xml', STYLES_XML);
+  z.file('word/document.xml', buildDocumentXml());
+  const blob = await z.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  downloadBlob(blob, fileName('docx'));
+  toast('Word-Datei erstellt.');
+}
+
+/* ---------- JSON sichern / öffnen ---------- */
+function exportJson(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  downloadBlob(blob, fileName('json'));
+  toast('Zwischenstand als Datei gesichert.');
+}
+function importJson(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const s = JSON.parse(r.result);
+      if(!s || !Array.isArray(s.policies)) throw new Error('bad');
+      state = { kunde: s.kunde || '', spalte: s.spalte || 'Anderer Versicherer', policies: s.policies };
+      $('kunde').value = state.kunde;
+      $('spalte').value = state.spalte;
+      resetForm();
+      renderAll();
+      toast('Datei geladen: ' + state.policies.length + ' Verträge.');
+    }catch(e){
+      toast('Datei konnte nicht gelesen werden.');
+    }
+  };
+  r.readAsText(file);
+}
+
+/* ---------- Ereignisse ---------- */
+$('btnAdd').addEventListener('click', () => {
+  const p = collectForm();
+  if(!p) return;
+  if(editId){
+    const i = state.policies.findIndex(x => x.id===editId);
+    if(i > -1){ p.created = state.policies[i].created; state.policies[i] = p; }
+    toast('Vertrag aktualisiert.');
+  } else {
+    state.policies.push(p);
+    toast(displayName(p) + ' hinzugefügt.');
+  }
+  resetForm();
+  renderAll();
+});
+$('btnCancelEdit').addEventListener('click', () => { resetForm(); });
+$('f_rv').addEventListener('change', e => { $('rvBlock').style.display = e.target.checked ? '' : 'none'; });
+['f_beitrag_f','f_beitrag_rv'].forEach(id => $(id).addEventListener('input', () => { updateAnnualNotes(); updateRabattUI(); }));
+['f_zw_f','f_zw_rv'].forEach(id => $(id).addEventListener('change', () => { updateAnnualNotes(); updateRabattUI(); }));
+$('f_rabatt').addEventListener('input', updateRabattUI);
+$('f_rabatt_apply').addEventListener('change', updateRabattUI);
+$('f_ablauf').addEventListener('change', updateFristHint);
+$('kunde').addEventListener('input', e => { state.kunde = e.target.value; renderCaseBar(); autosave(); });
+$('spalte').addEventListener('input', e => { state.spalte = e.target.value; renderBilanz(); autosave(); });
+$('sortSel').addEventListener('change', renderList);
+$('btnDocx').addEventListener('click', exportDocx);
+$('btnPreview').addEventListener('click', openPreview);
+$('btnPrint').addEventListener('click', () => window.print());
+$('btnCloseOv').addEventListener('click', () => $('overlay').classList.remove('open'));
+$('overlay').addEventListener('click', e => { if(e.target.id==='overlay') $('overlay').classList.remove('open'); });
+$('btnSave').addEventListener('click', exportJson);
+$('btnLoad').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', e => { if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=''; });
+$('btnNew').addEventListener('click', () => {
+  if(!state.policies.length || confirm('Alle erfassten Daten verwerfen und neu beginnen?')){
+    state = { kunde:'', spalte:'Anderer Versicherer', policies:[] };
+    $('kunde').value = '';
+    $('spalte').value = 'Anderer Versicherer';
+    resetForm();
+    renderAll();
+  }
+});
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') $('overlay').classList.remove('open');
+});
+
+/* ---------- Start ---------- */
+buildSpGrid();
+restore();
+$('kunde').value = state.kunde || '';
+$('spalte').value = state.spalte || 'Anderer Versicherer';
+renderAll();
+</script>
+</body>
+</html>
