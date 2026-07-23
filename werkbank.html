@@ -129,6 +129,7 @@ input,select{font-family:inherit;color:var(--ink)}
     <input class="kfilter" id="kFilter" type="text" placeholder="Kunden filtern …">
     <div class="klist" id="kListe"></div>
     <div class="rail-foot">
+      <a href="#" id="lnkKVerw">⚙ Kunden verwalten</a>
       <a href="index.html" id="lnkKlassisch">↗ Klassische Ansicht</a>
       <a href="index.html">↗ Adressbuch und Kündigungen (klassisch)</a>
       <select id="ansichtSel" aria-label="Ansicht wählen">
@@ -591,6 +592,14 @@ async function wordExport(){
   }
 }
 $('btnKundeNeu').addEventListener('click', kundeNeu);
+$('lnkKVerw').addEventListener('click', e => {
+  e.preventDefault();
+  if(!hatKern) return;
+  BVK.kundenDialog({ onChange: () => {
+    state = BVK.ensureStateShape(BVK.aktiverState());
+    renderAll();
+  }});
+});
 $('btnVertragNeu').addEventListener('click', neuerVertrag);
 $('addRow').addEventListener('click', neuerVertrag);
 $('btnWord').addEventListener('click', wordExport);

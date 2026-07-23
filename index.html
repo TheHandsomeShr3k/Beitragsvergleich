@@ -512,6 +512,7 @@ try{
     <div class="field-inline" id="kundeSelWrap">
       <label for="kundeSel">Kunde wechseln</label>
       <select id="kundeSel" class="sm" style="border:none;border-bottom:2px solid var(--line);background:transparent;padding:5px 2px;font-size:14px;font-weight:600;min-width:190px;color:var(--ink)"></select>
+      <button id="btnKundenVerw" type="button" style="margin-top:6px;border:1px solid var(--line);background:transparent;border-radius:7px;padding:4px 10px;font-size:11.5px;color:var(--ink);opacity:.75;cursor:pointer">Kunden verwalten</button>
     </div>
   </div>
   <div class="case-az" id="caseAz"></div>
@@ -2203,6 +2204,23 @@ function wechsleKunde(id){
   renderAll();
 }
 $('kundeSel').addEventListener('change', e => wechsleKunde(e.target.value));
+(function(){
+  const b = $('btnKundenVerw');
+  if(!b) return;
+  if(!window.BVK){ b.style.display = 'none'; return; }
+  b.addEventListener('click', () => {
+    autosaveJetzt();
+    BVK.kundenDialog({ onChange: () => {
+      state = ensureStateShape(BVK.aktiverState());
+      state.policies.forEach(p => { if(p.gesellschaft) p.gesellschaft = shortenGesName(p.gesellschaft); });
+      $('kunde').value = state.kunde || '';
+      $('spalte').value = state.spalte || 'Anderer Versicherer';
+      kundeSig = '';
+      refreshKundeSel();
+      renderAll();
+    }});
+  });
+})();
 function kernResync(){
   if(!window.BVK) return;
   try{

@@ -48,6 +48,7 @@ button{font-family:inherit;cursor:pointer}
 <body>
 <div class="kopf">
   <span><b id="kTitel">Copilot</b> <small id="kSub"></small></span>
+  <button id="btnKunden" type="button" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--mut2);margin-right:6px">Kunden</button>
   <select id="ansichtSel" aria-label="Ansicht wählen">
     <option value="copilot">Ansicht: Copilot</option>
     <option value="home">Home öffnen</option>
@@ -283,6 +284,14 @@ $('senden').addEventListener('click', () => {
 });
 $('ein').addEventListener('keydown', e => { if(e.key === 'Enter') $('senden').click(); });
 if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'copilot', speichern);
+$('btnKunden').addEventListener('click', () => {
+  if(!hatKern) return;
+  speichern();
+  BVK.kundenDialog({ onChange: () => {
+    state = BVK.ensureStateShape(BVK.aktiverState());
+    kopfSub();
+  }});
+});
 function resync(){
   if(!hatKern) return;
   BVK.reload();

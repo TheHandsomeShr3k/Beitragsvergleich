@@ -66,6 +66,7 @@ button{font-family:inherit;cursor:pointer}
   <div class="kz">
     <b id="kzTitel">Neue Beratung</b>
     <span id="kzStep">Schritt 1 von 4</span>
+    <button id="btnKunden" type="button" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:11.5px;cursor:pointer;color:var(--mut2)">Kunden</button>
     <select id="ansichtSel" aria-label="Ansicht wählen">
       <option value="assistent">Ansicht: Assistent</option>
       <option value="home">Home öffnen</option>
@@ -362,6 +363,16 @@ function render(){
 }
 
 if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'assistent', speichernJetzt);
+$('btnKunden').addEventListener('click', () => {
+  if(!hatKern) return;
+  speichernJetzt();
+  const vorher = BVK.aktivId();
+  BVK.kundenDialog({ onChange: () => {
+    state = BVK.ensureStateShape(BVK.aktiverState());
+    if(BVK.aktivId() !== vorher) step = 1;
+    render();
+  }});
+});
 function resync(){
   if(!hatKern) return;
   if(saveT) speichernJetzt();

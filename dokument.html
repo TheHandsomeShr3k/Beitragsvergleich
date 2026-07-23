@@ -68,6 +68,7 @@ button{font-family:inherit;cursor:pointer}
   <b id="titel">Dokument-Studio</b>
   <div class="r">
     <span class="live">● Live synchron</span>
+    <button class="btn" id="btnKunden">Kunden</button>
     <button class="btn" id="btnPrint">Drucken / PDF</button>
     <button class="btn ak" id="btnWord">Word herunterladen</button>
     <select id="ansichtSel" aria-label="Ansicht wählen">
@@ -305,6 +306,15 @@ function renderAll(){ renderKopf(); renderVListe(); renderEditor(); renderBlatt(
 $('d_kunde').addEventListener('input', e => { state.kunde = e.target.value; speichern(); renderBlatt(); $('titel').textContent = 'Dokument-Studio · ' + (state.kunde.trim() || 'Unbenannter Kunde'); });
 $('d_spalte').addEventListener('input', e => { state.spalte = e.target.value; speichern(); renderBlatt(); });
 $('btnPrint').addEventListener('click', () => window.print());
+$('btnKunden').addEventListener('click', () => {
+  if(!hatKern) return;
+  speichernJetzt();
+  BVK.kundenDialog({ onChange: () => {
+    state = BVK.ensureStateShape(BVK.aktiverState());
+    if(!state.policies.some(p => p.id === selId)) selId = state.policies.length ? sortiert()[0].id : null;
+    renderAll();
+  }});
+});
 $('btnWord').addEventListener('click', async () => {
   if(!hatKern) return;
   if(!state.policies.length){ toast('Noch keine Verträge.'); return; }

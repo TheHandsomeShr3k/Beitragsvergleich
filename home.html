@@ -108,6 +108,7 @@ button{font-family:inherit;cursor:pointer}
     <button id="aWord">Word-Vergleich (aktiver Kunde)</button>
     <a href="werkbank.html">↗ Werkbank öffnen</a>
     <button id="aNeu">+ Neuer Kunde</button>
+    <button id="aKVerw">Kunden verwalten</button>
   </div>
 </div>
 
@@ -201,6 +202,10 @@ $('aNeu').addEventListener('click', () => {
   BVK.neu((n || '').trim());
   render();
   toast('Kunde angelegt und aktiviert.');
+});
+$('aKVerw').addEventListener('click', () => {
+  if(!hatKern) return;
+  BVK.kundenDialog({ onChange: render });
 });
 $('aVertrag').addEventListener('click', () => {
   if(!hatKern) return;

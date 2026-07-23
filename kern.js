@@ -418,7 +418,6 @@ BVK.ANSICHTEN = [
   { id:'dokument',   name:'Dokument-Studio', url:'dokument.html' },
   { id:'home',       name:'Home',            url:'home.html',      beta:true },
   { id:'werkbank',   name:'Werkbank',        url:'werkbank.html',  beta:true },
-  { id:'pipeline',   name:'Pipeline',        url:'pipeline.html',  beta:true },
   { id:'assistent',  name:'Assistent',       url:'assistent.html', beta:true },
   { id:'copilot',    name:'Copilot',         url:'copilot.html',   beta:true },
   { id:'uebersicht', name:'Alle Ansichten und Verwaltung …', url:'ansichten.html' }
@@ -750,6 +749,91 @@ BVK.kuendDialog = function(opts){
     zu();
     if(typeof opts.onExported === 'function'){ try{ opts.onExported(d, statusSetzen); }catch(e){} }
   });
+  doc.body.appendChild(ov);
+  ov.appendChild(card);
+};
+
+/* ---------- Kunden-Verwaltung als Dialog (aus jeder Ansicht) ---------- */
+BVK.kundenDialog = function(opts){
+  opts = opts || {};
+  const doc = global.document;
+  const ov = doc.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.52);z-index:999;display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px;overflow:auto';
+  const card = doc.createElement('div');
+  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:13px;box-shadow:0 24px 60px rgba(10,20,40,.35);width:min(440px,100%);padding:16px 18px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif;margin-bottom:8vh';
+  function melde(){ if(typeof opts.onChange === 'function'){ try{ opts.onChange(); }catch(e){} } }
+  function zu(){ ov.remove(); doc.removeEventListener('keydown', escH); }
+  function escH(e){ if(e.key === 'Escape') zu(); }
+  function bauen(){
+    card.innerHTML = '';
+    const kopf = doc.createElement('div');
+    kopf.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px';
+    const t = doc.createElement('b');
+    t.textContent = 'Kunden verwalten';
+    t.style.fontSize = '14px';
+    const x = doc.createElement('button');
+    x.textContent = '✕';
+    x.style.cssText = 'border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer';
+    x.addEventListener('click', zu);
+    kopf.append(t, x);
+    card.appendChild(kopf);
+    const aktiv = BVK.aktivId();
+    BVK.liste().forEach(k => {
+      const row = doc.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid #F0F2F5;font-size:13px';
+      const n = doc.createElement('span');
+      n.textContent = k.name;
+      n.title = 'Als aktiven Kunden setzen';
+      n.style.cssText = 'font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;flex:1' + (k.id === aktiv ? ';color:#274690' : '');
+      n.addEventListener('click', () => { BVK.setAktiv(k.id); bauen(); melde(); });
+      const m = doc.createElement('span');
+      m.textContent = k.anzahl + ' Verträge';
+      m.style.cssText = 'color:#8a93a5;font-size:11.5px;flex:none';
+      row.append(n, m);
+      if(k.id === aktiv){
+        const b = doc.createElement('span');
+        b.textContent = 'AKTIV';
+        b.style.cssText = 'font-size:9.5px;font-weight:700;color:#274690;background:#E4EDFB;border-radius:99px;padding:2px 8px;flex:none';
+        row.appendChild(b);
+      }
+      const del = doc.createElement('button');
+      del.textContent = 'Löschen';
+      del.style.cssText = 'border:1px solid #EFD7D4;background:#fff;color:#B3372B;border-radius:7px;padding:3px 10px;font-size:11.5px;font-weight:600;cursor:pointer;flex:none;font-family:inherit';
+      del.addEventListener('click', () => {
+        if(!global.confirm('Kunde \u201E' + k.name + '\u201C mit ' + k.anzahl + ' Verträgen endgültig löschen?')) return;
+        if(!BVK.loeschen(k.id)) global.alert('Der letzte Kunde kann nicht gelöscht werden.');
+        bauen();
+        melde();
+      });
+      row.appendChild(del);
+      card.appendChild(row);
+    });
+    const neuRow = doc.createElement('div');
+    neuRow.style.cssText = 'display:flex;gap:8px;margin-top:12px';
+    const inp = doc.createElement('input');
+    inp.placeholder = 'Neuer Kunde \u2014 Name';
+    inp.style.cssText = 'flex:1;min-width:0;border:1px solid #D9DEE7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit';
+    const add = doc.createElement('button');
+    add.textContent = '+ Anlegen';
+    add.style.cssText = 'border:none;background:#274690;color:#fff;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;flex:none';
+    function anlegen(){
+      BVK.neu(inp.value.trim());
+      inp.value = '';
+      bauen();
+      melde();
+    }
+    add.addEventListener('click', anlegen);
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter') anlegen(); });
+    neuRow.append(inp, add);
+    card.appendChild(neuRow);
+    const hint = doc.createElement('div');
+    hint.textContent = 'Klick auf einen Namen macht ihn zum aktiven Kunden. Löschen entfernt den Kunden samt Verträgen endgültig.';
+    hint.style.cssText = 'font-size:10.5px;color:#9aa2b2;margin-top:9px';
+    card.appendChild(hint);
+  }
+  doc.addEventListener('keydown', escH);
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  bauen();
   doc.body.appendChild(ov);
   ov.appendChild(card);
 };
