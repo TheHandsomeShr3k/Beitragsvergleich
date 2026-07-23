@@ -100,6 +100,7 @@ body.praes .fertig .z{font-size:15px;padding:7px 0}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A2333;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
 #toast.show{opacity:1}
 @media (max-width:760px){.rumpf{grid-template-columns:1fr}.rail{display:none}}
+@media (max-width:640px){.zwei,.drei{grid-template-columns:1fr}.rvzeile{grid-template-columns:1fr 1fr}.rvzeile .d{text-align:left}}
 </style>
 </head>
 <body>
@@ -154,7 +155,7 @@ try{
   dunkel = localStorage.getItem('bv_assistent_dunkel') === '1';
 }catch(e){}
 
-function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m){
   const t = $('toast');
   t.textContent = m; t.classList.add('show');

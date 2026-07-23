@@ -110,7 +110,7 @@ try{ localStorage.setItem('bv_ansicht', 'dokument'); }catch(e){}
 let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'Anderer Versicherer', policies:[] };
 let selId = state.policies.length ? state.policies[0].id : null;
 
-function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m){
   const t = $('toast');
   t.textContent = m; t.classList.add('show');

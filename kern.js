@@ -400,6 +400,7 @@ function downloadBlob(blob, name){
 }
 BVK.buildVergleichDocXml = buildVergleichDocXml;
 BVK.exportVergleichDocx = async function(state){
+  state = ensureStateShape(state);
   if(typeof global.JSZip === 'undefined') throw new Error('JSZip fehlt');
   const z = new global.JSZip();
   z.file('[Content_Types].xml', CT_XML);
@@ -1263,16 +1264,17 @@ BVK.sammelDialog = function(opts){
     });
   }
   function statusSetzen(g){
-    if(!q('status').checked) return;
     const st2 = BVK.stateVon(kid);
     if(!st2) return;
     const b = basisD();
     st2.absender = { name: b.name, strasse: b.strasse, ort: b.plzort };
     st2.kOrtWahl = b.ortWahl;
-    g.forEach(z => {
-      const pp = st2.policies.find(x => x.id === z.p.id);
-      if(pp) pp.status = 'kuendigung';
-    });
+    if(q('status').checked){
+      g.forEach(z => {
+        const pp = st2.policies.find(x => x.id === z.p.id);
+        if(pp) pp.status = 'kuendigung';
+      });
+    }
     BVK.speichern(kid, st2);
   }
   function zu(){ ov.remove(); doc.removeEventListener('keydown', escH); }
@@ -1325,11 +1327,12 @@ BVK.sammelDialog = function(opts){
 const WK_V = '2';
 function willkommenVielleicht(){
   if(!store) return;
-  let ansicht = null, letzte = 0, wkv = null;
+  let ansicht = null, letzte = 0, wkv = null, wkTs = 0;
   try{
     ansicht = store.getItem('bv_ansicht');
     letzte = parseInt(store.getItem('bv_letzte_nutzung') || '0', 10) || 0;
     wkv = store.getItem('bv_willkommen_v');
+    wkTs = parseInt(store.getItem('bv_willkommen_ts') || '0', 10) || 0;
   }catch(e){}
   const jetzt = Date.now();
   try{ store.setItem('bv_letzte_nutzung', String(jetzt)); }catch(e){}
@@ -1459,7 +1462,7 @@ function willkommenVielleicht(){
     return '';
   }
 
-  const gezeigtSchon = wkv != null;
+  const gezeigtSchon = wkv != null || wkTs > 0;
   const titel = gezeigtSchon ? 'Neu: die Ansichten im Überblick' : 'Willkommen im Bestandsvergleich!';
   const card = doc.createElement('div');
   card.className = 'wkCard';
@@ -1538,8 +1541,9 @@ function willkommenVielleicht(){
   doc.addEventListener('keydown', tasten);
   ov.appendChild(card);
   doc.body.appendChild(ov);
+  track.style.transition = 'none';
   goTo(idx, true);
-  requestAnimationFrame(() => goTo(idx));
+  requestAnimationFrame(() => { track.style.transition = ''; goTo(idx); });
 }
 
 /* ---------- Version, Badge und Speicher-Warnung ---------- */

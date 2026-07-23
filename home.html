@@ -155,7 +155,7 @@ const hatKern = !!window.BVK;
 if(!hatKern) $('kernfehlt').style.display = 'block';
 try{ localStorage.setItem('bv_ansicht', 'home'); }catch(e){}
 
-function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m){
   const t = $('toast');
   t.textContent = m;
@@ -179,10 +179,15 @@ function oeffneEditor(kid, pid){
     }
   });
 }
+let kundeSig = '';
 function renderKundeSel(){
+  const l = BVK.liste();
+  const sig = l.map(k => k.id + '#' + k.name + '#' + k.anzahl).join('|') + '@' + BVK.aktivId();
+  if(sig === kundeSig) return;
+  kundeSig = sig;
   const sel = $('kundeSel');
   sel.innerHTML = '';
-  BVK.liste().forEach(k => {
+  l.forEach(k => {
     const o = document.createElement('option');
     o.value = k.id;
     o.textContent = k.name + ' (' + k.anzahl + ')';
@@ -287,7 +292,7 @@ $('bzNeu').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() 
 $('btnVertragGross').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() : null, null));
 $('btnWord').addEventListener('click', async () => {
   if(!hatKern) return;
-  const st = BVK.aktiverState();
+  const st = BVK.ensureStateShape(BVK.aktiverState());
   if(!st.policies.length){ toast('Der aktive Kunde hat noch keine Verträge.'); return; }
   try{ await BVK.exportVergleichDocx(st); toast('Word-Datei erstellt.'); }
   catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }

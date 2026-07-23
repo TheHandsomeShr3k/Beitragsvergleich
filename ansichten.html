@@ -81,7 +81,7 @@ const hatKern = !!window.BVK;
 if(!hatKern) $('kernfehlt').style.display = 'block';
 try{ localStorage.setItem('bv_ansicht', 'uebersicht'); }catch(e){}
 
-function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m){
   const t = $('toast');
   t.textContent = m; t.classList.add('show');

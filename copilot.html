@@ -80,7 +80,7 @@ try{ localStorage.setItem('bv_ansicht', 'copilot'); }catch(e){}
 
 let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'', policies:[] };
 
-function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(m){
   const t = $('toast');
   t.textContent = m; t.classList.add('show');
@@ -216,8 +216,8 @@ function parseText(text){
     const c = tok.replace(/^(vsnr|nr\.?|vertragsnr\.?)[:=]?/i, '').replace(/[€]/g, '');
     if(!/\d/.test(c)) continue;
     if(c.replace(/\D/g, '').length < 4) continue;
-    if(ablaufTok && c.includes(ablaufTok)) continue;
-    if(beitragTok && c.replace(',', '.').includes(beitragTok.replace(',', '.'))) continue;
+    if(ablaufTok && c === ablaufTok) continue;
+    if(beitragTok && c.replace(',', '.') === beitragTok.replace(',', '.')) continue;
     vsnr = c;
     break;
   }
@@ -288,15 +288,6 @@ function addVorschlaege(){
 }
 
 /* ---------- Rückfragen ---------- */
-const fragenQ = [];
-let frageAktiv = false;
-function frageWeiter(){
-  if(frageAktiv) return;
-  const f = fragenQ.shift();
-  if(!f) return;
-  frageAktiv = true;
-  f(() => { frageAktiv = false; frageWeiter(); });
-}
 function frageBubble(text, bauen, done){
   const d = document.createElement('div');
   d.className = 'bot';
@@ -318,32 +309,33 @@ function chip(chips, txt, fn){
   chips.appendChild(b);
 }
 function planeFragen(d, karte){
+  const kette = [];
   if(!d.sparteSicher){
-    fragenQ.push(done => {
+    kette.push(done => {
       if(karte.uebernommen()){ done(); return; }
       frageBubble('Welche Sparte ist das?', (chips, fertig) => {
-        BVK.SPARTEN.forEach(s => chip(chips, s.name, () => { karte.set('sparte', s.id); fertig(s.name); }));
+        BVK.SPARTEN.forEach(s => chip(chips, s.name, () => { fertig(karte.set('sparte', s.id) ? s.name : 'Karte schon übernommen — bitte im Editor ändern'); }));
       }, done);
     });
   }
   if(d.beitrag != null && !d.zwSicher){
-    fragenQ.push(done => {
+    kette.push(done => {
       if(karte.uebernommen()){ done(); return; }
       frageBubble('Wie wird der Beitrag von ' + BVK.fmtNum(d.beitrag) + ' € gezahlt?', (chips, fertig) => {
-        Object.keys(BVK.ZW).forEach(z => chip(chips, BVK.ZW[z].l, () => { karte.set('zw', z); fertig(BVK.ZW[z].l); }));
+        Object.keys(BVK.ZW).forEach(z => chip(chips, BVK.ZW[z].l, () => { fertig(karte.set('zw', z) ? BVK.ZW[z].l : 'Karte schon übernommen — bitte im Editor ändern'); }));
       }, done);
     });
   }
   if(d.gesFuzzy){
-    fragenQ.push(done => {
+    kette.push(done => {
       if(karte.uebernommen()){ done(); return; }
       frageBubble('Gesellschaft war nicht ganz eindeutig — meintest du <b>' + esc(d.gesellschaft) + '</b>?', (chips, fertig) => {
         chip(chips, 'Ja, passt', () => fertig('übernommen'));
-        chip(chips, 'Nein, Feld leeren', () => { karte.set('gesellschaft', ''); fertig('geleert — bitte auf der Karte eintragen'); });
+        chip(chips, 'Nein, Feld leeren', () => { fertig(karte.set('gesellschaft', '') ? 'geleert — bitte auf der Karte eintragen' : 'Karte schon übernommen — bitte im Editor ändern'); });
       }, done);
     });
   } else if(!d.gesellschaft){
-    fragenQ.push(done => {
+    kette.push(done => {
       if(karte.uebernommen()){ done(); return; }
       frageBubble('Welche Gesellschaft ist der bisherige Versicherer?', (chips, fertig) => {
         const inp = document.createElement('input');
@@ -351,30 +343,34 @@ function planeFragen(d, karte){
         inp.placeholder = 'Gesellschaft';
         inp.style.width = '190px';
         chips.appendChild(inp);
-        chip(chips, 'Ok', () => {
+        const gesOk = () => {
           const v = inp.value.trim();
-          if(v) karte.set('gesellschaft', v);
+          if(v && !karte.set('gesellschaft', v)){ fertig('Karte schon übernommen — bitte im Editor ändern'); return; }
           fertig(v || 'übersprungen');
-        });
+        };
+        chip(chips, 'Ok', gesOk);
         chip(chips, 'Überspringen', () => fertig('übersprungen'));
-        inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ const v = inp.value.trim(); if(v) karte.set('gesellschaft', v); fertig(v || 'übersprungen'); } });
+        inp.addEventListener('keydown', e => { if(e.key === 'Enter') gesOk(); });
         inp.focus();
       }, done);
     });
   }
   if(!d.ablauf){
-    fragenQ.push(done => {
+    kette.push(done => {
       if(karte.uebernommen()){ done(); return; }
       frageBubble('Wann läuft der Vertrag ab? (für die Kündigungsfrist)', (chips, fertig) => {
         const inp = document.createElement('input');
         inp.type = 'date';
         chips.appendChild(inp);
-        chip(chips, 'Ok', () => { if(inp.value) karte.set('ablauf', inp.value); fertig(inp.value ? BVK.fmtDate(inp.value) : 'übersprungen'); });
+        chip(chips, 'Ok', () => { if(inp.value && !karte.set('ablauf', inp.value)){ fertig('Karte schon übernommen — bitte im Editor ändern'); return; } fertig(inp.value ? BVK.fmtDate(inp.value) : 'übersprungen'); });
         chip(chips, 'Überspringen', () => fertig('übersprungen'));
       }, done);
     });
   }
-  frageWeiter();
+  (function weiter(){
+    const f = kette.shift();
+    if(f) f(weiter);
+  })();
 }
 
 /* ---------- Karte ---------- */
@@ -447,14 +443,16 @@ function addKarte(d0){
   scrollEnde();
   return {
     set(f, val){
+      if(k.dataset.done) return false;
       const el = q(f);
-      if(!el) return;
+      if(!el) return false;
       el.value = val;
       if(f === 'sparte'){
         const s = BVK.sparteOf({ sparte: val });
         pkEl.textContent = s.k;
         ttEl.textContent = s.full;
       }
+      return true;
     },
     uebernommen(){ return !!k.dataset.done; }
   };
