@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Nunito:wght@500;600;700&family=Archivo:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="kern.js"></script>
 <style>
 :root{
   --ink:#14273F;
@@ -480,6 +481,15 @@ try{
     <small>Beitrags- &amp; Leistungsübersicht · Fremdbestand vs. R+V</small>
   </div>
   <div class="top-actions">
+    <select id="ansichtSel" class="theme-sel" aria-label="Ansicht wählen">
+      <option value="klassisch">Ansicht: Klassisch</option>
+      <option value="werkbank">Werkbank öffnen</option>
+      <option value="pipeline" disabled>Pipeline (bald)</option>
+      <option value="home" disabled>Home (bald)</option>
+      <option value="dokument" disabled>Dokument-Studio (bald)</option>
+      <option value="assistent" disabled>Assistent (bald)</option>
+      <option value="copilot" disabled>Copilot (bald)</option>
+    </select>
     <button class="btn ghost" id="btnDesign">Design</button>
     <button class="btn ghost" id="btnLoad">Datei öffnen</button>
     <button class="btn ghost" id="btnSave">Zwischenstand sichern</button>
@@ -498,6 +508,10 @@ try{
     <div class="field-inline">
       <label for="spalte">Spaltentitel Fremdbestand</label>
       <input id="spalte" class="sm" type="text" value="Anderer Versicherer" autocomplete="off">
+    </div>
+    <div class="field-inline" id="kundeSelWrap">
+      <label for="kundeSel">Kunde wechseln</label>
+      <select id="kundeSel" class="sm" style="border:none;border-bottom:2px solid var(--line);background:transparent;padding:5px 2px;font-size:14px;font-weight:600;min-width:190px;color:var(--ink)"></select>
     </div>
   </div>
   <div class="case-az" id="caseAz"></div>
@@ -937,8 +951,20 @@ const store = (() => {
   } catch(e){ return null; }
 })();
 const STORE_KEY = 'bestandsvergleich_v1';
-function autosave(){ if(store){ try{ store.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} } }
+function autosave(){
+  if(window.BVK){
+    try{ BVK.speichern(BVK.aktivId(), state); refreshKundeSel(); return; }catch(e){}
+  }
+  if(store){ try{ store.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+}
 function restore(){
+  if(window.BVK){
+    try{
+      state = ensureStateShape(BVK.aktiverState());
+      state.policies.forEach(p => { if(p.gesellschaft) p.gesellschaft = shortenGesName(p.gesellschaft); });
+      return;
+    }catch(e){}
+  }
   if(!store) return;
   try{
     const raw = store.getItem(STORE_KEY);
@@ -1975,6 +2001,18 @@ $('btnSave').addEventListener('click', exportJson);
 $('btnLoad').addEventListener('click', () => $('fileInput').click());
 $('fileInput').addEventListener('change', e => { if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=''; });
 $('btnNew').addEventListener('click', () => {
+  if(window.BVK){
+    BVK.speichern(BVK.aktivId(), state);
+    BVK.neu('');
+    state = ensureStateShape(BVK.aktiverState());
+    $('kunde').value = '';
+    $('spalte').value = 'Anderer Versicherer';
+    resetForm();
+    kundeSig = '';
+    renderAll();
+    toast('Neuer Kunde angelegt — der bisherige bleibt im Kundenwechsler erhalten.');
+    return;
+  }
   if(!state.policies.length || confirm('Alle erfassten Daten verwerfen und neu beginnen?')){
     state = { kunde:'', spalte:'Anderer Versicherer', policies:[], absender:{name:'',strasse:'',ort:''}, kOrtWahl:'Röthenbach' };
     $('kunde').value = '';
@@ -2104,12 +2142,69 @@ function animMoney(el, txt){
   el._raf = requestAnimationFrame(frame);
 }
 
+/* ---------- Mehrkunden & Ansichten (gemeinsamer Kern) ---------- */
+let kundeSig = '';
+function refreshKundeSel(){
+  const sel = $('kundeSel');
+  if(!sel) return;
+  if(!window.BVK){ const w = $('kundeSelWrap'); if(w) w.style.display = 'none'; return; }
+  const l = BVK.liste();
+  const sig = l.map(k => k.id + ':' + k.name + ':' + k.anzahl).join('|') + '#' + BVK.aktivId();
+  if(sig === kundeSig) return;
+  kundeSig = sig;
+  sel.innerHTML = '';
+  l.forEach(k => {
+    const o = document.createElement('option');
+    o.value = k.id;
+    o.textContent = k.name + ' (' + k.anzahl + ')';
+    sel.appendChild(o);
+  });
+  sel.value = BVK.aktivId();
+}
+function wechsleKunde(id){
+  if(!window.BVK) return;
+  BVK.speichern(BVK.aktivId(), state);
+  BVK.setAktiv(id);
+  state = ensureStateShape(BVK.aktiverState());
+  state.policies.forEach(p => { if(p.gesellschaft) p.gesellschaft = shortenGesName(p.gesellschaft); });
+  $('kunde').value = state.kunde || '';
+  $('spalte').value = state.spalte || 'Anderer Versicherer';
+  resetForm();
+  renderAll();
+}
+$('kundeSel').addEventListener('change', e => wechsleKunde(e.target.value));
+window.addEventListener('storage', e => {
+  if(window.BVK && (e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1')){
+    BVK.reload();
+    kundeSig = '';
+    state = ensureStateShape(BVK.aktiverState());
+    $('kunde').value = state.kunde || '';
+    $('spalte').value = state.spalte || 'Anderer Versicherer';
+    refreshKundeSel();
+    renderAll();
+  }
+});
+(function initAnsicht(){
+  const sel = $('ansichtSel');
+  if(!sel) return;
+  sel.value = 'klassisch';
+  sel.addEventListener('change', () => {
+    const v = sel.value;
+    sel.value = 'klassisch';
+    if(v === 'werkbank'){
+      if(store){ try{ store.setItem('bv_ansicht', 'werkbank'); }catch(e){} }
+      location.href = 'werkbank.html';
+    }
+  });
+})();
+
 /* ---------- Start ---------- */
 abLoad();
 initDesign();
 buildSpGrid();
 initJahrSelect();
 restore();
+refreshKundeSel();
 refreshGesListen();
 $('kunde').value = state.kunde || '';
 $('spalte').value = state.spalte || 'Anderer Versicherer';
