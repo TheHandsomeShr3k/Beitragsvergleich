@@ -721,6 +721,7 @@ try{
 
       <div class="k-sec">Vertrag</div>
       <div class="fgrid">
+        <div class="f wide"><label for="k_sparte">Versicherungsart <span style="font-weight:400">(erscheint im Betreff und im Kündigungssatz)</span></label><input id="k_sparte" type="text" placeholder="z. B. Kraftfahrzeugversicherung"></div>
         <div class="f"><label for="k_vsnr">Vertragsnummer</label><input id="k_vsnr" class="mono" type="text"></div>
         <div class="f"><label for="k_termin">Kündigung zum</label><input id="k_termin" type="date"></div>
       </div>
@@ -1564,6 +1565,7 @@ function kOpen(p){
   // Empfänger (Verzeichnis-Vorschlag mit Datenstand)
   applyVerzeichnis(lookupVersicherer(p.gesellschaft), p.gesellschaft);
   // Vertrag
+  $('k_sparte').value = kuendBez(p);
   $('k_vsnr').value = p.vsnr || '';
   $('k_termin').value = p.ablauf || '';
   $('k_hilfsweise').checked = true;
@@ -1582,6 +1584,7 @@ function kCollect(){
     ges: $('k_ges').value.trim(),
     adr: $('k_adr').value.trim(),
     fax: $('k_fax').value.trim(),
+    bez: $('k_sparte').value.trim(),
     vsnr: $('k_vsnr').value.trim(),
     termin: $('k_termin').value,
     hilfsweise: $('k_hilfsweise').checked,
@@ -1594,13 +1597,33 @@ function kCollect(){
   autosave();
   return d;
 }
+function kuendBez(p){
+  if(!p) return '';
+  if(p.sparte === 'so') return (p.label || '').trim();
+  if(p.sparte === 'kfz') return 'Kraftfahrzeugversicherung';
+  const s = sparteOf(p);
+  return s ? s.full : '';
+}
+function kSubject(d){
+  const bez = (d.bez || '').trim();
+  const vs = (d.vsnr || '').trim();
+  if(!bez) return vs ? 'Kündigung der Vertragsnummer ' + vs : 'Kündigung meines Vertrags';
+  let s = /versicherung$/i.test(bez) ? 'Kündigung meiner ' + bez : 'Kündigung \u2013 ' + bez;
+  if(vs) s += ', Vertragsnummer ' + vs;
+  return s;
+}
+function kObjekt(d){
+  const bez = (d.bez || '').trim();
+  if(!bez) return 'o. g. Vertragsnummer';
+  return /versicherung$/i.test(bez) ? 'meine o. g. ' + bez : 'den o. g. Vertrag';
+}
 function kBodyText(d){
   let satz1;
   if(d.termin){
-    satz1 = 'hiermit kündige ich o. g. Vertragsnummer fristgerecht zum ' + fmtDate(d.termin) +
+    satz1 = 'hiermit kündige ich ' + kObjekt(d) + ' fristgerecht zum ' + fmtDate(d.termin) +
       (d.hilfsweise ? ', hilfsweise zum nächstmöglichen Termin.' : '.');
   } else {
-    satz1 = 'hiermit kündige ich o. g. Vertragsnummer zum nächstmöglichen Termin.';
+    satz1 = 'hiermit kündige ich ' + kObjekt(d) + ' zum nächstmöglichen Termin.';
   }
   let satz2 = 'Bitte senden Sie mir eine schriftliche Kündigungsbestätigung unter Angabe des Beendigungszeitpunkts zu.';
   if(d.rueckwerbung) satz2 += ' Eine Kontaktaufnahme Ihrerseits zum Zweck der Rückwerbung ist nicht erwünscht. Ich bitte Sie höflich, davon abzusehen.';
@@ -1616,7 +1639,7 @@ function buildKuendigungHtml(d){
     '<p class="kblock">' + adrLines.join('<br>') + '</p>' +
     (d.fax ? '<p class="kblock">Fax-Nr: ' + esc(d.fax) + '</p>' : '') +
     '<p class="kdatum">' + esc(d.ort) + ', den ' + fmtDate(d.datum) + '</p>' +
-    '<p class="kbetreff">Kündigung der Vertragsnummer ' + esc(d.vsnr) + '</p>' +
+    '<p class="kbetreff">' + esc(kSubject(d)) + '</p>' +
     '<p class="kabsatz">Sehr geehrte Damen und Herren,</p>' +
     '<p class="kabsatz">' + esc(satz1) + '</p>' +
     '<p class="kabsatz">' + esc(satz2) + '</p>' +
@@ -1637,7 +1660,7 @@ function buildKuendigungDocXml(d){
   body += EMPTY;
   if(d.fax){ body += P('Fax-Nr: ' + d.fax) + EMPTY; }
   body += wP([wRun(d.ort + ', den ' + fmtDate(d.datum), {sz:22})], {align:'right', after:360});
-  body += wP([wRun('Kündigung der Vertragsnummer ' + d.vsnr, {b:true, sz:22})], {after:280});
+  body += wP([wRun(kSubject(d), {b:true, sz:22})], {after:280});
   body += P('Sehr geehrte Damen und Herren,', {after:200});
   body += P(satz1, {after:200});
   body += P(satz2, {after:200});
@@ -1723,6 +1746,7 @@ function sammelBase(){
 function sammelD(p, base){
   const v = lookupVersicherer(p.gesellschaft);
   return Object.assign({}, base, {
+    bez: kuendBez(p),
     ges: v ? v.n : (p.gesellschaft || ''),
     adr: v ? v.a : '',
     fax: v ? (v.f || '') : '',
