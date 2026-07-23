@@ -406,13 +406,14 @@ BVK.exportVergleichDocx = async function(state){
 
 /* ---------- Ansichten-Menü (feste Reihenfolge, überall gleich) ---------- */
 BVK.ANSICHTEN = [
-  { id:'home',      name:'Home',            url:'home.html' },
-  { id:'werkbank',  name:'Werkbank',        url:'werkbank.html' },
-  { id:'pipeline',  name:'Pipeline',        url:'pipeline.html' },
-  { id:'dokument',  name:'Dokument-Studio', url:'dokument.html' },
-  { id:'assistent', name:'Assistent',       url:'assistent.html' },
-  { id:'copilot',   name:'Copilot',         url:'copilot.html' },
-  { id:'klassisch', name:'Klassisch',       url:'index.html' }
+  { id:'klassisch',  name:'Klassisch',       url:'index.html' },
+  { id:'dokument',   name:'Dokument-Studio', url:'dokument.html' },
+  { id:'home',       name:'Home',            url:'home.html',      beta:true },
+  { id:'werkbank',   name:'Werkbank',        url:'werkbank.html',  beta:true },
+  { id:'pipeline',   name:'Pipeline',        url:'pipeline.html',  beta:true },
+  { id:'assistent',  name:'Assistent',       url:'assistent.html', beta:true },
+  { id:'copilot',    name:'Copilot',         url:'copilot.html',   beta:true },
+  { id:'uebersicht', name:'Alle Ansichten und Verwaltung …', url:'ansichten.html' }
 ];
 BVK.ansichtMenu = function(sel, aktuell, vorWechsel){
   if(!sel) return;
@@ -420,7 +421,7 @@ BVK.ansichtMenu = function(sel, aktuell, vorWechsel){
   BVK.ANSICHTEN.forEach(a => {
     const o = global.document.createElement('option');
     o.value = a.id;
-    o.textContent = a.id === aktuell ? 'Ansicht: ' + a.name : a.name;
+    o.textContent = (a.id === aktuell ? 'Ansicht: ' : '') + a.name + (a.beta ? ' (Beta)' : '');
     sel.appendChild(o);
   });
   sel.value = aktuell;
@@ -532,6 +533,29 @@ BVK.schnellVertrag = function(opts){
   ov.appendChild(card);
   const g = q('[data-f="ges"]');
   if(g) g.focus();
+};
+
+/* ---------- Verwaltung: Kunden-Dubletten bereinigen ---------- */
+BVK.bereinigeDubletten = function(){
+  const d = ladeAlles();
+  const sig = k =>
+    (k.state.kunde || '').trim().toLowerCase() + '#' +
+    k.state.policies.length + '#' +
+    k.state.policies.map(p => (p.vsnr || '') + '|' + (p.gesellschaft || '') + '|' + (p.beitragF ?? '')).sort().join(';');
+  const beste = {};
+  d.kunden.forEach(k => {
+    const s = sig(k);
+    if(!beste[s] || (k.geaendert || 0) > (beste[s].geaendert || 0)) beste[s] = k;
+  });
+  const behalten = new Set(Object.values(beste).map(k => k.id));
+  const vorher = d.kunden.length;
+  d.kunden = d.kunden.filter(k => behalten.has(k.id));
+  if(!d.kunden.length){
+    d.kunden = [ { id: 'k' + Date.now(), angelegt: Date.now(), geaendert: Date.now(), state: leererState() } ];
+  }
+  if(!d.kunden.some(k => k.id === d.aktivId)) d.aktivId = d.kunden[0].id;
+  sichere();
+  return vorher - d.kunden.length;
 };
 
 global.BVK = BVK;

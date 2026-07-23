@@ -2142,6 +2142,20 @@ function animMoney(el, txt){
   el._raf = requestAnimationFrame(frame);
 }
 
+function ensureStateShape(s){
+  if(window.BVK) return BVK.ensureStateShape(s);
+  s = s && typeof s === 'object' ? s : {};
+  return {
+    kunde: s.kunde || '',
+    spalte: s.spalte || 'Anderer Versicherer',
+    policies: Array.isArray(s.policies) ? s.policies : [],
+    absender: (s.absender && typeof s.absender === 'object')
+      ? { name: s.absender.name || '', strasse: s.absender.strasse || '', ort: s.absender.ort || '' }
+      : { name:'', strasse:'', ort:'' },
+    kOrtWahl: s.kOrtWahl || 'Röthenbach'
+  };
+}
+
 /* ---------- Mehrkunden & Ansichten (gemeinsamer Kern) ---------- */
 let kundeSig = '';
 function refreshKundeSel(){

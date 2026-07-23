@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ansichten &amp; Verwaltung · Bestandsvergleich</title>
+<script src="kern.js"></script>
+<style>
+:root{--bg:#F3F4F6;--card:#fff;--line:#E3E6EB;--ink:#1B2434;--mut:#838DA0;--mut2:#5A6478;--ak:#0E4DA4;--gruen:#1C7A4D;--rot:#B3372B;--mono:ui-monospace,'SF Mono',Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+.kopf{padding:20px 24px 6px;max-width:1060px;margin:0 auto}
+.kopf h1{margin:0;font-size:19px;font-weight:600}
+.kopf p{margin:4px 0 0;color:var(--mut);font-size:13px}
+.sek{max-width:1060px;margin:0 auto;padding:14px 24px}
+.sek h2{font-size:11px;letter-spacing:.09em;color:var(--mut);margin:0 0 10px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.karte{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.karte.top{border-color:var(--ak);box-shadow:0 0 0 1px var(--ak)}
+.prev{height:104px;background:#EDF0F5;position:relative;border-bottom:1px solid var(--line)}
+.prev *{position:absolute;border-radius:3px}
+.kbody{padding:11px 13px;flex:1;display:flex;flex-direction:column}
+.kname{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px}
+.badge{font-size:9.5px;font-weight:700;letter-spacing:.06em;border-radius:99px;padding:2px 8px;background:#E9EBEF;color:#8a93a5}
+.badge.empf{background:#E4EDFB;color:var(--ak)}
+.kdesc{font-size:11.5px;color:var(--mut);margin-top:3px;flex:1}
+.kakt{display:flex;gap:6px;margin-top:9px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--ink);text-decoration:none;display:inline-block}
+.btn.ak{background:var(--ak);border-color:var(--ak);color:#fff}
+.kliste{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.krow{display:flex;align-items:center;gap:12px;padding:10px 15px;border-bottom:1px solid #F0F2F5;font-size:13px}
+.krow:last-child{border-bottom:none}
+.krow .n{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.krow .m{color:var(--mut);font-size:12px;flex:none}
+.krow .aktiv{font-size:10px;font-weight:700;color:var(--ak);background:#E4EDFB;border-radius:99px;padding:2px 8px;flex:none}
+.krow .del{margin-left:auto;border:1px solid var(--line);background:#fff;color:var(--rot);border-radius:7px;padding:4px 11px;font-size:11.5px;font-weight:600;flex:none}
+.krow .del:hover{background:#FBE9E7;border-color:#EFC4BF}
+.werk{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.werk .hint{font-size:11.5px;color:var(--mut)}
+#kernfehlt{display:none;max-width:1060px;margin:12px auto;padding:10px 14px;background:#FBE9E7;color:var(--rot);border-radius:9px;font-size:13px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1B2434;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="kopf">
+  <h1>Ansichten &amp; Verwaltung</h1>
+  <p>Alle Arbeitsoberflächen auf einen Blick — gleiche Kunden, gleiche Daten, nur der Arbeitsstil wechselt. Diese Seite erreichst du in jeder Ansicht über das Menü unter „Alle Ansichten und Verwaltung".</p>
+</div>
+<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+
+<div class="sek">
+  <h2>ANSICHTEN</h2>
+  <div class="grid" id="ansGrid"></div>
+</div>
+
+<div class="sek">
+  <h2>STAMMDATEN · KUNDEN VERWALTEN</h2>
+  <div class="kliste" id="kListe"></div>
+  <div class="werk">
+    <button class="btn" id="btnDubl">Duplikate bereinigen</button>
+    <span class="hint">Erkennt Kunden mit identischem Namen und identischen Verträgen und behält jeweils die neueste Version. Löschen ist endgültig — Verträge des Kunden gehen mit.</span>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const hatKern = !!window.BVK;
+if(!hatKern) $('kernfehlt').style.display = 'block';
+try{ localStorage.setItem('bv_ansicht', 'uebersicht'); }catch(e){}
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m){
+  const t = $('toast');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ---------- Mini-Vorschauen (schematisch) ---------- */
+function prev(id){
+  const P = { b:'#fff', l:'#D7DDE6', a:'#0E4DA4', g:'#9FB4CC', d:'#2A3648' };
+  const box = (st) => '<i style="' + st + '"></i>';
+  let h = '';
+  if(id === 'klassisch'){
+    h = box('left:8%;right:8%;top:9%;height:12%;background:' + P.d) +
+        box('left:8%;width:38%;top:28%;bottom:26%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('left:50%;right:8%;top:28%;bottom:26%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('left:8%;right:8%;bottom:9%;height:11%;background:' + P.d);
+  } else if(id === 'dokument'){
+    h = box('left:6%;width:34%;top:10%;bottom:10%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('left:9%;width:28%;top:16%;height:6%;background:' + P.l) +
+        box('left:9%;width:28%;top:26%;height:6%;background:' + P.l) +
+        box('left:9%;width:28%;top:36%;height:6%;background:' + P.a) +
+        box('left:46%;right:8%;top:8%;bottom:8%;background:#fff;border:1px solid ' + P.l + ';box-shadow:2px 3px 0 rgba(20,30,60,.12)') +
+        box('left:50%;right:12%;top:16%;height:7%;background:' + P.a) +
+        box('left:50%;right:12%;top:28%;height:34%;border:1px solid ' + P.l);
+  } else if(id === 'home'){
+    h = box('left:7%;width:42%;top:12%;height:44%;background:' + P.d) +
+        box('left:53%;right:7%;top:12%;height:44%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('left:7%;width:42%;bottom:12%;height:26%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('left:53%;width:19%;bottom:12%;height:26%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('right:7%;width:19%;bottom:12%;height:26%;background:' + P.b + ';border:1px solid ' + P.l);
+  } else if(id === 'werkbank'){
+    h = box('left:6%;width:22%;top:8%;bottom:8%;background:#EDEDEA;border:1px solid ' + P.l);
+    for(let i = 0; i < 4; i++) h += box('left:33%;right:7%;top:' + (14 + i * 19) + '%;height:12%;background:' + P.b + ';border:1px solid ' + P.l);
+  } else if(id === 'pipeline'){
+    for(let i = 0; i < 4; i++){
+      h += box('left:' + (6 + i * 23.5) + '%;width:20%;top:10%;bottom:10%;background:#E4E8EE');
+      h += box('left:' + (8 + i * 23.5) + '%;width:16%;top:17%;height:20%;background:' + P.b + ';border:1px solid ' + P.l);
+      if(i < 2) h += box('left:' + (8 + i * 23.5) + '%;width:16%;top:42%;height:20%;background:' + P.b + ';border:1px solid ' + P.l);
+    }
+  } else if(id === 'assistent'){
+    h = box('left:10%;right:10%;top:12%;height:6%;background:' + P.l) +
+        box('left:10%;width:40%;top:12%;height:6%;background:' + P.a) +
+        box('left:22%;right:22%;top:30%;bottom:22%;background:' + P.b + ';border:1px solid ' + P.l) +
+        box('left:56%;width:18%;bottom:28%;height:9%;background:' + P.a);
+  } else if(id === 'copilot'){
+    h = box('right:10%;width:44%;top:12%;height:13%;background:' + P.d + ';border-radius:8px') +
+        box('left:10%;width:52%;top:32%;height:24%;background:' + P.b + ';border:1px solid ' + P.l + ';border-radius:8px') +
+        box('left:10%;right:10%;bottom:10%;height:14%;background:' + P.b + ';border:1.5px solid ' + P.a + ';border-radius:9px');
+  } else {
+    h = box('left:10%;right:10%;top:20%;bottom:20%;background:' + P.b + ';border:1px solid ' + P.l);
+  }
+  return '<div class="prev">' + h + '</div>';
+}
+const BESCHREIBUNG = {
+  klassisch: 'Das bewährte Volltool: Erfassung, Rabattrechner, Word/PDF, Kündigungen, Adressbuch, Designs.',
+  dokument: 'Links eingeben, rechts baut sich das Kundendokument live als A4-Vorschau auf. Direkt drucken oder als Word laden.',
+  home: 'Bento-Startseite mit Jahresbilanz, Ersparnis-Ring und Fristen-Radar über alle Kunden.',
+  werkbank: 'Kundenliste links, Bestand als Tabelle mit Inline-Bearbeitung, Detail-Editor je Zeile und ⌘K-Befehlspalette.',
+  pipeline: 'Kanban-Board über alle Kunden: Erfasst → Angebot → Kündigung raus → Umgedeckt, per Drag-and-drop.',
+  assistent: 'Geführter 4-Schritte-Ablauf für die komplette Beratung — ideal zum Delegieren.',
+  copilot: 'Vertrag als Satz eintippen, der lokale Parser baut die strukturierte Karte daraus.'
+};
+
+function renderAnsichten(){
+  const g = $('ansGrid');
+  g.innerHTML = '';
+  const liste = hatKern ? BVK.ANSICHTEN : [];
+  liste.filter(a => a.id !== 'uebersicht').forEach(a => {
+    const k = document.createElement('div');
+    k.className = 'karte' + (a.beta ? '' : ' top');
+    k.innerHTML = prev(a.id) +
+      '<div class="kbody">' +
+        '<div class="kname">' + esc(a.name) + (a.beta ? '<span class="badge">BETA</span>' : '<span class="badge empf">EMPFOHLEN</span>') + '</div>' +
+        '<div class="kdesc">' + esc(BESCHREIBUNG[a.id] || '') + '</div>' +
+        '<div class="kakt"><a class="btn ak" href="' + a.url + '" data-oeffne="' + a.id + '">Öffnen</a></div>' +
+      '</div>';
+    k.querySelector('[data-oeffne]').addEventListener('click', () => {
+      try{ localStorage.setItem('bv_ansicht', a.id); }catch(e){}
+    });
+    g.appendChild(k);
+  });
+}
+
+function renderKunden(){
+  if(!hatKern) return;
+  const w = $('kListe');
+  w.innerHTML = '';
+  const aktiv = BVK.aktivId();
+  BVK.liste().forEach(k => {
+    const row = document.createElement('div');
+    row.className = 'krow';
+    row.innerHTML =
+      '<span class="n">' + esc(k.name) + '</span>' +
+      (k.id === aktiv ? '<span class="aktiv">AKTIV</span>' : '') +
+      '<span class="m">' + k.anzahl + ' Verträge · zuletzt ' + new Date(k.geaendert).toLocaleDateString('de-DE') + '</span>' +
+      '<button class="del">Löschen</button>';
+    row.querySelector('.del').addEventListener('click', () => {
+      if(!confirm('Kunde „' + k.name + '" mit ' + k.anzahl + ' Verträgen endgültig löschen?')) return;
+      if(!BVK.loeschen(k.id)) toast('Der letzte Kunde kann nicht gelöscht werden.');
+      else toast('Kunde gelöscht.');
+      renderKunden();
+    });
+    w.appendChild(row);
+  });
+}
+$('btnDubl').addEventListener('click', () => {
+  if(!hatKern) return;
+  const n = BVK.bereinigeDubletten();
+  renderKunden();
+  toast(n > 0 ? (n + ' Duplikat' + (n === 1 ? '' : 'e') + ' entfernt — jeweils die neueste Version behalten.') : 'Keine Duplikate gefunden.');
+});
+function resync(){ if(hatKern){ BVK.reload(); renderKunden(); } }
+window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
+
+renderAnsichten();
+renderKunden();
+</script>
+</body>
+</html>
