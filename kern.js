@@ -404,5 +404,135 @@ BVK.exportVergleichDocx = async function(state){
   downloadBlob(blob, 'Bestandsvergleich_' + k + '_' + new Date().toISOString().slice(0,10) + '.docx');
 };
 
+/* ---------- Ansichten-Menü (feste Reihenfolge, überall gleich) ---------- */
+BVK.ANSICHTEN = [
+  { id:'home',      name:'Home',            url:'home.html' },
+  { id:'werkbank',  name:'Werkbank',        url:'werkbank.html' },
+  { id:'pipeline',  name:'Pipeline',        url:'pipeline.html' },
+  { id:'dokument',  name:'Dokument-Studio', url:'dokument.html' },
+  { id:'assistent', name:'Assistent',       url:'assistent.html' },
+  { id:'copilot',   name:'Copilot',         url:'copilot.html' },
+  { id:'klassisch', name:'Klassisch',       url:'index.html' }
+];
+BVK.ansichtMenu = function(sel, aktuell, vorWechsel){
+  if(!sel) return;
+  sel.innerHTML = '';
+  BVK.ANSICHTEN.forEach(a => {
+    const o = global.document.createElement('option');
+    o.value = a.id;
+    o.textContent = a.id === aktuell ? 'Ansicht: ' + a.name : a.name;
+    sel.appendChild(o);
+  });
+  sel.value = aktuell;
+  sel.addEventListener('change', () => {
+    const v = sel.value;
+    sel.value = aktuell;
+    if(v === aktuell) return;
+    const ziel = BVK.ANSICHTEN.find(a => a.id === v);
+    if(!ziel) return;
+    if(typeof vorWechsel === 'function'){ try{ vorWechsel(); }catch(e){} }
+    if(store){ try{ store.setItem('bv_ansicht', v); }catch(e){} }
+    global.location.href = ziel.url;
+  });
+};
+
+/* ---------- Schnellerfassung (aus jeder Ansicht aufrufbar) ---------- */
+BVK.neuerVertragObjekt = function(){
+  return {
+    id: 'p' + Date.now() + Math.random().toString(36).slice(2,6),
+    created: Date.now(), sparte: 'phv', label: '', gesellschaft: '', vsnr: '', ablauf: '',
+    personen: '', kennzeichen: '', leistF: '', beitragF: null, zwF: 'jaehrlich',
+    beitragsjahrF: new Date().getFullYear(),
+    rv: false, leistRV: '', beitragRV: null, zwRV: 'jaehrlich', rabatt: null, rabattApply: false
+  };
+};
+BVK.schnellVertrag = function(opts){
+  opts = opts || {};
+  const doc = global.document;
+  let dl = doc.getElementById('bvkGesL');
+  if(!dl){
+    dl = doc.createElement('datalist');
+    dl.id = 'bvkGesL';
+    const namen = [...new Set(Object.values(BVK.adressbuch()).map(v => v.n).concat(BVK.VERZEICHNIS.map(v => v.n)))]
+      .sort((a, b) => a.localeCompare(b, 'de'));
+    namen.forEach(n => { const o = doc.createElement('option'); o.value = n; dl.appendChild(o); });
+    doc.body.appendChild(dl);
+  }
+  const ov = doc.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.52);z-index:999;display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px;overflow:auto';
+  const card = doc.createElement('div');
+  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:13px;box-shadow:0 24px 60px rgba(10,20,40,.35);width:min(410px,100%);padding:16px 18px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif';
+  const F = 'width:100%;box-sizing:border-box;border:1px solid #D9DEE7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#1a2333';
+  const L = 'display:block;font-size:10.5px;letter-spacing:.05em;color:#7a8294;margin:9px 0 3px';
+  card.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Vertrag schnell erfassen</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">✕</button></div>' +
+    '<label style="' + L + '">KUNDE</label><select data-f="kunde" style="' + F + '"></select>' +
+    '<label style="' + L + '">SPARTE</label><select data-f="sparte" style="' + F + '"></select>' +
+    '<label style="' + L + '">GESELLSCHAFT (BISHER)</label><input data-f="ges" list="bvkGesL" style="' + F + '" placeholder="z. B. Allianz" autocomplete="off">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">VERSICHERUNGSNUMMER</label><input data-f="vsnr" style="' + F + ';font-family:ui-monospace,monospace" placeholder="—"></div>' +
+      '<div><label style="' + L + '">ABLAUF</label><input data-f="ablauf" type="date" style="' + F + '"></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">BEITRAG BISHER (€)</label><input data-f="beitrag" inputmode="decimal" style="' + F + ';text-align:right;font-family:ui-monospace,monospace" placeholder="89,90"></div>' +
+      '<div><label style="' + L + '">ZAHLWEISE</label><select data-f="zw" style="' + F + '"></select></div>' +
+    '</div>' +
+    '<div data-warn style="display:none;color:#B3372B;font-size:12px;margin-top:8px"></div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">' +
+      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Abbrechen</button>' +
+      '<button data-ok style="border:none;background:#274690;color:#fff;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Speichern</button>' +
+    '</div>' +
+    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Leistungen, R+V-Angebot und Nachlass ergänzt du danach am schnellsten in der Werkbank.</div>';
+  const q = s => card.querySelector(s);
+  const kSel = q('[data-f="kunde"]');
+  const kunden = BVK.liste();
+  kunden.forEach(k => {
+    const o = doc.createElement('option');
+    o.value = k.id;
+    o.textContent = k.name + ' (' + k.anzahl + ')';
+    kSel.appendChild(o);
+  });
+  kSel.value = (opts.kundeId && kunden.some(k => k.id === opts.kundeId)) ? opts.kundeId : BVK.aktivId();
+  const sSel = q('[data-f="sparte"]');
+  BVK.SPARTEN.forEach(s => { const o = doc.createElement('option'); o.value = s.id; o.textContent = s.full; sSel.appendChild(o); });
+  const zSel = q('[data-f="zw"]');
+  Object.keys(BVK.ZW).forEach(z => { const o = doc.createElement('option'); o.value = z; o.textContent = BVK.ZW[z].l; zSel.appendChild(o); });
+  zSel.value = 'jaehrlich';
+  function zu(){ ov.remove(); doc.removeEventListener('keydown', escH); }
+  function escH(e){ if(e.key === 'Escape') zu(); }
+  doc.addEventListener('keydown', escH);
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  card.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', zu));
+  q('[data-ok]').addEventListener('click', () => {
+    const ges = q('[data-f="ges"]').value.trim();
+    const beitrag = BVK.parseEuro(q('[data-f="beitrag"]').value);
+    const vsnr = q('[data-f="vsnr"]').value.trim();
+    if(!ges && beitrag == null && !vsnr){
+      const w = q('[data-warn]');
+      w.textContent = 'Bitte mindestens Gesellschaft, Versicherungsnummer oder Beitrag angeben.';
+      w.style.display = 'block';
+      return;
+    }
+    const kid = kSel.value;
+    const st = BVK.stateVon(kid);
+    if(!st){ zu(); return; }
+    const p = BVK.neuerVertragObjekt();
+    p.sparte = sSel.value;
+    p.gesellschaft = ges;
+    p.vsnr = vsnr;
+    p.ablauf = q('[data-f="ablauf"]').value;
+    p.beitragF = beitrag;
+    p.zwF = zSel.value;
+    st.policies.push(p);
+    BVK.speichern(kid, st);
+    zu();
+    if(typeof opts.onDone === 'function'){ try{ opts.onDone(kid, p.id); }catch(e){} }
+  });
+  doc.body.appendChild(ov);
+  ov.appendChild(card);
+  const g = q('[data-f="ges"]');
+  if(g) g.focus();
+};
+
 global.BVK = BVK;
 })(typeof window !== 'undefined' ? window : globalThis);

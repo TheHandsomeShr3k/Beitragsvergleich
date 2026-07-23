@@ -104,6 +104,7 @@ button{font-family:inherit;cursor:pointer}
   </div>
 
   <div class="tile t-akt">
+    <button id="aVertrag">+ Vertrag erfassen</button>
     <button id="aWord">Word-Vergleich (aktiver Kunde)</button>
     <a href="werkbank.html">↗ Werkbank öffnen</a>
     <button id="aNeu">+ Neuer Kunde</button>
@@ -201,18 +202,17 @@ $('aNeu').addEventListener('click', () => {
   render();
   toast('Kunde angelegt und aktiviert.');
 });
+$('aVertrag').addEventListener('click', () => {
+  if(!hatKern) return;
+  BVK.schnellVertrag({ onDone: () => { render(); toast('Vertrag gespeichert.'); } });
+});
 $('schnellGo').addEventListener('click', () => {
   const v = $('schnellIn').value.trim();
   try{ sessionStorage.setItem('bv_copilot_prefill', v); }catch(e){}
   location.href = 'copilot.html';
 });
 $('schnellIn').addEventListener('keydown', e => { if(e.key === 'Enter') $('schnellGo').click(); });
-$('ansichtSel').addEventListener('change', e => {
-  const v = e.target.value;
-  e.target.value = 'home';
-  const Z = { werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html', klassisch:'index.html' };
-  if(Z[v]){ try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
-});
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'home');
 function resync(){ if(hatKern){ BVK.reload(); render(); } }
 window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
 window.addEventListener('pageshow', e => { if(e.persisted) resync(); });

@@ -2201,6 +2201,10 @@ document.addEventListener('visibilitychange', () => { if(!document.hidden) kernR
 (function initAnsicht(){
   const sel = $('ansichtSel');
   if(!sel) return;
+  if(window.BVK){
+    BVK.ansichtMenu(sel, 'klassisch', () => { try{ BVK.speichern(BVK.aktivId(), state); }catch(e){} });
+    return;
+  }
   sel.value = 'klassisch';
   const ZIELE = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html' };
   sel.addEventListener('change', () => {

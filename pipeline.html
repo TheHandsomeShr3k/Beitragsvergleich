@@ -15,6 +15,7 @@ button{font-family:inherit;cursor:pointer}
 .top h1 small{font-weight:400;font-size:12px;color:var(--mut)}
 .top .r{display:flex;gap:6px;flex-wrap:wrap}
 .top select{border:1px solid var(--line);border-radius:99px;padding:6px 11px;font-size:12px;background:#fff}
+.btnneu{border:none;border-radius:99px;padding:6px 13px;background:var(--ak);color:#fff;font-weight:600;font-size:12px;cursor:pointer}
 .board{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px;align-items:start;padding:0 18px 20px;overflow-x:auto}
 .col{background:var(--col);border-radius:12px;padding:9px;min-height:120px}
 .col.gr{background:#E4F0EA}
@@ -44,6 +45,7 @@ button{font-family:inherit;cursor:pointer}
 <div class="top">
   <h1>Pipeline <small>· Verträge über alle Kunden nach Status</small></h1>
   <div class="r">
+    <button class="btnneu" id="btnVertragNeu">+ Vertrag</button>
     <select id="fKunde"><option value="">Alle Kunden</option></select>
     <select id="ansichtSel" aria-label="Ansicht wählen">
       <option value="pipeline">Ansicht: Pipeline</option>
@@ -193,13 +195,15 @@ function fillKunden(){
   });
   sel.value = cur;
 }
-$('fKunde').addEventListener('change', render);
-$('ansichtSel').addEventListener('change', e => {
-  const v = e.target.value;
-  e.target.value = 'pipeline';
-  const Z = { home:'home.html', werkbank:'werkbank.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html', klassisch:'index.html' };
-  if(Z[v]){ try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
+$('btnVertragNeu').addEventListener('click', () => {
+  if(!hatKern) return;
+  BVK.schnellVertrag({
+    kundeId: $('fKunde').value || undefined,
+    onDone: () => { fillKunden(); render(); toast('Vertrag angelegt — Spalte „Erfasst".'); }
+  });
 });
+$('fKunde').addEventListener('change', render);
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'pipeline');
 function resync(){ if(hatKern){ BVK.reload(); fillKunden(); render(); } }
 window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
 window.addEventListener('pageshow', e => { if(e.persisted) resync(); });

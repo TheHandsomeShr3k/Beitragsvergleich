@@ -302,12 +302,7 @@ $('btnWord').addEventListener('click', async () => {
   try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
   catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
 });
-$('ansichtSel').addEventListener('change', e => {
-  const v = e.target.value;
-  e.target.value = 'dokument';
-  const Z = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', assistent:'assistent.html', copilot:'copilot.html', klassisch:'index.html' };
-  if(Z[v]){ speichern(); try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
-});
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'dokument', speichern);
 function resync(){
   if(!hatKern) return;
   BVK.reload();

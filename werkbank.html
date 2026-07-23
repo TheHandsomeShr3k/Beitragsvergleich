@@ -581,16 +581,7 @@ $('kFilter').addEventListener('input', e => { kFilterTxt = e.target.value.toLowe
 $('sortSel').addEventListener('change', renderRows);
 $('filterSparte').addEventListener('change', renderRows);
 $('lnkKlassisch').addEventListener('click', () => speichern());
-$('ansichtSel').addEventListener('change', e => {
-  const v = e.target.value;
-  e.target.value = 'werkbank';
-  const ZIELE = { klassisch:'index.html', home:'home.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html' };
-  if(ZIELE[v]){
-    speichern();
-    try{ localStorage.setItem('bv_ansicht', v); }catch(err){}
-    location.href = ZIELE[v];
-  }
-});
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'werkbank', speichern);
 function resync(){
   if(!hatKern) return;
   BVK.reload();

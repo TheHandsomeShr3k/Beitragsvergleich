@@ -282,12 +282,7 @@ $('senden').addEventListener('click', () => {
   verarbeite(v);
 });
 $('ein').addEventListener('keydown', e => { if(e.key === 'Enter') $('senden').click(); });
-$('ansichtSel').addEventListener('change', e => {
-  const v = e.target.value;
-  e.target.value = 'copilot';
-  const Z = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', klassisch:'index.html' };
-  if(Z[v]){ speichern(); try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
-});
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'copilot', speichern);
 function resync(){
   if(!hatKern) return;
   BVK.reload();

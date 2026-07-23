@@ -352,12 +352,7 @@ function render(){
   }
 }
 
-$('ansichtSel').addEventListener('change', e => {
-  const v = e.target.value;
-  e.target.value = 'assistent';
-  const Z = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', copilot:'copilot.html', klassisch:'index.html' };
-  if(Z[v]){ speichern(); try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
-});
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'assistent', speichern);
 function resync(){
   if(!hatKern) return;
   BVK.reload();
