@@ -7,56 +7,97 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="kern.js"></script>
 <style>
-:root{--bg:#F7F8FA;--card:#fff;--line:#E8EAEE;--ink:#1A2333;--mut:#7A8294;--mut2:#9AA2B2;--ak:#1552B4;--ak-bg:#EAF1FC;--gruen:#1C7A4D;--rot:#B3372B;--mono:ui-monospace,Menlo,monospace}
+:root{--bg:#F7F8FA;--card:#fff;--rail:#FBFCFD;--line:#E8EAEE;--ink:#1A2333;--mut:#7A8294;--mut2:#5A6478;--ak:#1552B4;--ak-bg:#EAF1FC;--gruen:#1C7A4D;--gruen-bg:#E4F2EA;--rot:#B3372B;--mono:ui-monospace,Menlo,monospace}
+body.dunkel{--bg:#14181F;--card:#1B2029;--rail:#171B22;--line:#2A313C;--ink:#E8EAF0;--mut:#7E8798;--mut2:#A6AEBB;--ak:#4E7FE1;--ak-bg:#1B2740;--gruen:#5CC08E;--gruen-bg:#1B2B24;--rot:#E07A6E}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column;transition:background .15s}
 button{font-family:inherit;cursor:pointer}
-.kopf{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px}
-.kz{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mut)}
+.kopf{background:var(--card);border-bottom:1px solid var(--line);padding:12px 20px}
+.kz{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--mut);flex-wrap:wrap}
 .kz b{color:var(--ink);font-size:13px}
-.kz select{border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;background:#fff}
+.kz .sp{flex:1}
+.modi{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.modi button{border:none;background:var(--card);padding:5px 13px;font-size:11.5px;color:var(--mut2)}
+.modi button.on{background:var(--ak);color:#fff;font-weight:600}
+.kbtn{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 10px;font-size:11.5px;color:var(--mut2)}
+.kz select{border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;background:var(--card);color:var(--ink)}
 .prog{display:flex;gap:6px;margin-top:9px}
-.prog i{flex:1;height:4px;border-radius:99px;background:#E3E6EC}
+.prog i{flex:1;height:4px;border-radius:99px;background:var(--line)}
 .prog i.on{background:var(--ak)}
-.steps{display:flex;gap:18px;margin-top:7px;font-size:11.5px;color:var(--mut2)}
+body.praes .prog i{height:6px}
+.steps{display:flex;gap:18px;margin-top:7px;font-size:11.5px;color:var(--mut)}
 .steps span.on{color:var(--ak);font-weight:600}
 .rumpf{flex:1;display:grid;grid-template-columns:210px 1fr;min-height:0}
-.rail{border-right:1px solid var(--line);background:#FBFCFD;padding:16px;font-size:12px;overflow:auto}
-.rail .sec{font-size:10.5px;letter-spacing:.08em;color:var(--mut2);margin-bottom:8px}
-.rk{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px}
+body.praes .rumpf{grid-template-columns:1fr}
+.rail{border-right:1px solid var(--line);background:var(--rail);padding:16px;font-size:12px;overflow:auto}
+body.praes .rail{display:none}
+.rail .sec{font-size:10.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:8px}
+.rk{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px}
 .rk b{font-size:12px}
 .rk div{color:var(--mut);font-size:11px}
 .rsum{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--mut)}
 .rsum strong{color:var(--ink);font-size:14px;font-family:var(--mono)}
 .buehne{padding:24px 30px;display:flex;flex-direction:column;overflow:auto}
+body.praes .buehne{padding:34px 44px;align-items:center}
+body.praes .buehne>*{width:100%;max-width:660px}
 .ueber{font-size:12px;color:var(--ak);font-weight:600;letter-spacing:.04em}
 .frage{font-size:21px;font-weight:600;margin-top:4px}
+body.praes .frage{font-size:29px}
 .hint{font-size:13px;color:var(--mut);margin-top:3px}
-.inhalt{margin-top:16px;max-width:540px}
+body.praes .hint{font-size:14.5px}
+.inhalt{margin-top:16px;max-width:540px;width:100%}
+body.praes .inhalt{max-width:660px}
 .f{margin-bottom:10px}
 .f label{display:block;font-size:11.5px;color:var(--mut);margin-bottom:3px}
-.f input,.f select,.f textarea{width:100%;border:1px solid #DDE2EA;border-radius:9px;padding:9px 12px;font-size:13.5px;background:#fff;font-family:inherit}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13.5px;background:var(--card);color:var(--ink);font-family:inherit}
+body.praes .f input,body.praes .f select,body.praes .f textarea{font-size:16px;padding:12px 14px;border-radius:11px}
 .f textarea{min-height:60px;resize:vertical}
-.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--ak);outline:none;box-shadow:0 0 0 3px rgba(21,82,180,.12)}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--ak);outline:none;box-shadow:0 0 0 3px var(--ak-bg)}
 .zwei{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .drei{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chips button{font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid #DDE2EA;background:#fff;font-weight:500}
+.chips button{font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-weight:500;color:var(--ink)}
+body.praes .chips button{font-size:15px;padding:13px 20px;border-radius:12px}
 .chips button.on{border:2px solid var(--ak);background:var(--ak-bg);color:var(--ak);font-weight:600;padding:9px 15px}
-.leiste{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:22px;gap:10px;flex-wrap:wrap}
-.btn{border:1px solid #DDE2EA;background:#fff;border-radius:10px;padding:10px 20px;font-size:13.5px;font-weight:500}
+body.praes .chips button.on{padding:12px 19px}
+.leiste{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:22px;gap:10px;flex-wrap:wrap;width:100%}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 20px;font-size:13.5px;font-weight:500;color:var(--ink)}
+body.praes .btn{font-size:15.5px;padding:13px 26px;border-radius:12px}
 .btn.ak{background:var(--ak);border-color:var(--ak);color:#fff;font-weight:600}
 .btn.leise{border:none;background:none;color:var(--mut)}
-.rvk{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+.rvk{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+body.praes .rvk{padding:20px 22px;border-radius:14px}
 .rvk b{font-size:13.5px}
+body.praes .rvk b{font-size:18px}
 .rvk .s{font-size:11.5px;color:var(--mut);font-family:var(--mono)}
-.fertig{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;max-width:540px}
-.fertig .z{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F0F2F6;font-size:13px}
+body.praes .rvk .s{font-size:13px}
+.ersbanner{margin-top:12px;background:var(--gruen-bg);color:var(--gruen);border-radius:10px;padding:10px 14px;font-size:14px;text-align:center}
+body.praes .ersbanner{font-size:16px;padding:13px 16px}
+.fertig{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;max-width:540px;width:100%}
+.fertig .z{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+body.praes .fertig .z{font-size:15px;padding:7px 0}
 .fertig .z:last-child{border-bottom:none}
 .fertig .z b{font-family:var(--mono)}
 .gr{color:var(--gruen)}
-#kernfehlt{display:none;margin:12px 20px;background:#F6E5E1;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A2333;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+.kwrap{max-width:680px;width:100%}
+.ksek{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 14px;margin-bottom:9px}
+.kh{display:flex;align-items:center;gap:10px}
+.kh .t{font-size:13px;font-weight:600}
+.kh .m{font-size:12px;color:var(--mut)}
+.kh .sp{flex:1}
+.knum{width:20px;height:20px;border-radius:50%;background:var(--ak-bg);color:var(--ak);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.knum.ok{background:var(--gruen-bg);color:var(--gruen)}
+.krow2{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12.5px;padding:6px 2px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:7px}
+.krow2:hover{background:var(--rail)}
+.krow2:last-child{border-bottom:none}
+.krow2 .g{font-family:var(--mono);white-space:nowrap}
+.kadd{color:var(--ak);font-weight:600;font-size:12.5px;cursor:pointer;border:none;background:none;padding:7px 2px}
+.rvzeile{display:grid;grid-template-columns:1fr 120px 118px 92px;gap:8px;align-items:center;font-size:12.5px;padding:5px 2px}
+.rvzeile input{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12.5px;text-align:right;font-family:var(--mono);background:var(--card);color:var(--ink);width:100%}
+.rvzeile select{border:1px solid var(--line);border-radius:7px;padding:6px 7px;font-size:12px;background:var(--card);color:var(--ink);width:100%}
+.rvzeile .d{font-family:var(--mono);font-size:12px;text-align:right}
+#kernfehlt{display:none;margin:12px 20px;background:#F6E5E1;color:#B3372B;border-radius:9px;padding:10px 14px;font-size:13px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A2333;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
 #toast.show{opacity:1}
 @media (max-width:760px){.rumpf{grid-template-columns:1fr}.rail{display:none}}
 </style>
@@ -66,16 +107,14 @@ button{font-family:inherit;cursor:pointer}
   <div class="kz">
     <b id="kzTitel">Neue Beratung</b>
     <span id="kzStep">Schritt 1 von 4</span>
-    <button id="btnKunden" type="button" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:11.5px;cursor:pointer;color:var(--mut2)">Kunden</button>
-    <select id="ansichtSel" aria-label="Ansicht wählen">
-      <option value="assistent">Ansicht: Assistent</option>
-      <option value="home">Home öffnen</option>
-      <option value="werkbank">Werkbank öffnen</option>
-      <option value="pipeline">Pipeline öffnen</option>
-      <option value="dokument">Dokument-Studio öffnen</option>
-      <option value="copilot">Copilot öffnen</option>
-      <option value="klassisch">Klassisch öffnen</option>
-    </select>
+    <span class="sp"></span>
+    <div class="modi">
+      <button data-m="praes">Präsentation</button>
+      <button data-m="kompakt">Kompakt</button>
+    </div>
+    <button class="kbtn" id="btnTheme" title="Hell/Dunkel umschalten">◐</button>
+    <button class="kbtn" id="btnKunden" type="button">Kunden</button>
+    <select id="ansichtSel" aria-label="Ansicht wählen"></select>
   </div>
   <div class="prog" id="prog"><i></i><i></i><i></i><i></i></div>
   <div class="steps" id="steps">
@@ -104,7 +143,16 @@ try{ localStorage.setItem('bv_ansicht', 'assistent'); }catch(e){}
 
 let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'Anderer Versicherer', policies:[], absender:{name:'',strasse:'',ort:''}, kOrtWahl:'Röthenbach' };
 let step = 1;
+let rvIdx = 0;
 let wahlSparte = 'phv';
+let offen1 = null;
+let modus = 'praes';
+let dunkel = false;
+try{
+  const m = localStorage.getItem('bv_assistent_modus');
+  if(m === 'kompakt') modus = 'kompakt';
+  dunkel = localStorage.getItem('bv_assistent_dunkel') === '1';
+}catch(e){}
 
 function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function toast(m){
@@ -148,12 +196,33 @@ function zwSel(val){
   });
   return s;
 }
+function anwendModus(){
+  document.body.classList.toggle('praes', modus === 'praes');
+  document.body.classList.toggle('dunkel', dunkel);
+  document.querySelectorAll('.modi button').forEach(b => b.classList.toggle('on', b.dataset.m === modus));
+  $('btnTheme').textContent = dunkel ? '☀' : '☾';
+  $('prog').style.display = modus === 'praes' ? '' : 'none';
+  $('steps').style.display = modus === 'praes' ? '' : 'none';
+}
+function editor(pid){
+  if(!hatKern) return;
+  speichernJetzt();
+  BVK.vertragDialog({
+    kundeId: BVK.aktivId(),
+    policyId: pid,
+    onDone: (k, id, art) => {
+      state = BVK.ensureStateShape(BVK.aktiverState());
+      render();
+      toast(art === 'geloescht' ? 'Vertrag gelöscht.' : 'Vertrag gespeichert.');
+    }
+  });
+}
 
 function renderRail(){
   const w = $('railListe');
   w.innerHTML = '';
   const arr = sortiert();
-  if(!arr.length) w.innerHTML = '<div style="color:var(--mut2)">Noch keine Verträge.</div>';
+  if(!arr.length) w.innerHTML = '<div style="color:var(--mut)">Noch keine Verträge.</div>';
   arr.forEach(p => {
     const el = document.createElement('div');
     el.className = 'rk';
@@ -168,16 +237,16 @@ function renderRail(){
 function kopf(ueber, frage, hint){
   return '<div class="ueber">' + ueber + '</div><div class="frage">' + frage + '</div>' + (hint ? '<div class="hint">' + hint + '</div>' : '');
 }
-function leiste(zurueck, weiterTxt, weiterFn, extra){
+function leiste(zurueckFn, weiterTxt, weiterFn, extra){
   const l = document.createElement('div');
   l.className = 'leiste';
   const bz = document.createElement('button');
   bz.className = 'btn leise';
   bz.textContent = '← Zurück';
-  bz.style.visibility = zurueck ? 'visible' : 'hidden';
-  bz.addEventListener('click', () => { step = Math.max(1, step - 1); render(); });
+  bz.style.visibility = zurueckFn ? 'visible' : 'hidden';
+  if(zurueckFn) bz.addEventListener('click', zurueckFn);
   const r = document.createElement('div');
-  r.style.display = 'flex'; r.style.gap = '10px'; r.style.alignItems = 'center';
+  r.style.display = 'flex'; r.style.gap = '10px'; r.style.alignItems = 'center'; r.style.flexWrap = 'wrap';
   if(extra) r.appendChild(extra);
   const bw = document.createElement('button');
   bw.className = 'btn ak';
@@ -188,12 +257,11 @@ function leiste(zurueck, weiterTxt, weiterFn, extra){
   return l;
 }
 
-function render(){
-  $('kzTitel').textContent = 'Beratung · ' + ((state.kunde || '').trim() || 'Neuer Kunde');
+/* ---------- Präsentations- / Schrittmodus ---------- */
+function renderSchritte(){
   $('kzStep').textContent = 'Schritt ' + step + ' von 4';
   [...$('prog').children].forEach((i, n) => i.classList.toggle('on', n < step));
   [...$('steps').children].forEach((s, n) => s.classList.toggle('on', n === step - 1));
-  renderRail();
   const b = $('buehne');
   b.innerHTML = '';
 
@@ -215,7 +283,7 @@ function render(){
     iO.addEventListener('input', () => { state.absender.ort = iO.value; speichern(); });
     box.appendChild(f('PLZ und Ort', iO));
     b.appendChild(box);
-    b.appendChild(leiste(false, 'Weiter →', () => { step = 2; render(); }));
+    b.appendChild(leiste(null, 'Weiter →', () => { step = 2; render(); }));
   }
 
   if(step === 2){
@@ -276,92 +344,251 @@ function render(){
         beitragsjahrF: parseInt(jS.value, 10) || y,
         rv: false, leistRV: '', beitragRV: null, zwRV: 'jaehrlich', rabatt: null, rabattApply: false
       });
-      speichern();
+      speichernJetzt();
       toast('Vertrag ' + nr + ' gespeichert.');
       render();
     });
-    b.appendChild(leiste(true, 'Weiter zum Vergleich →', () => {
+    b.appendChild(leiste(() => { step = 1; render(); }, 'Weiter zum Vergleich →', () => {
       if(!state.policies.length){ toast('Erst mindestens einen Vertrag speichern.'); return; }
-      step = 3; render();
+      step = 3; rvIdx = 0; render();
     }, speichernBtn));
   }
 
   if(step === 3){
-    b.innerHTML = kopf('SCHRITT 3', 'Was bietet die R+V?', 'Angebot je Vertrag — leer gelassene stehen im Dokument mit 0,00 €.');
+    const arr = sortiert();
+    if(rvIdx >= arr.length) rvIdx = Math.max(0, arr.length - 1);
+    const p = arr[rvIdx];
+    b.innerHTML = kopf('SCHRITT 3 · VERTRAG ' + (rvIdx + 1) + ' VON ' + arr.length, 'Was bietet die R+V?', 'Leer gelassene Verträge stehen im Dokument mit 0,00 €.');
     const box = document.createElement('div');
     box.className = 'inhalt';
-    box.style.maxWidth = '620px';
-    sortiert().forEach(p => {
-      const k = document.createElement('div');
-      k.className = 'rvk';
-      k.innerHTML = '<b>' + esc(BVK.displayName(p)) + '</b> <span class="s">· ' + esc(p.gesellschaft || '—') +
-        (BVK.annual(p, 'f') != null ? ' · bisher ' + BVK.fmtNum(BVK.annual(p, 'f')) + ' €/J' : '') + '</span>';
-      const ta = document.createElement('textarea');
-      ta.value = p.leistRV || '';
-      ta.placeholder = 'Leistungen R+V — eine Angabe pro Zeile';
-      ta.addEventListener('input', () => { p.leistRV = ta.value; speichern(); });
-      k.appendChild(f('Leistungen R+V', ta));
-      const bIn = inp('text', p.beitragRV != null ? BVK.fmtNum(p.beitragRV) : '', 'kein Angebot = leer');
-      bIn.inputMode = 'decimal';
-      bIn.addEventListener('change', () => { p.beitragRV = BVK.parseEuro(bIn.value); p.rv = p.beitragRV != null; speichern(); renderRail(); });
-      const zS = zwSel(p.zwRV);
-      zS.addEventListener('change', () => { p.zwRV = zS.value; speichern(); renderRail(); });
-      const z = document.createElement('div'); z.className = 'zwei';
-      z.append(f('Beitrag R+V (€)', bIn), f('Zahlweise', zS));
-      k.appendChild(z);
-      box.appendChild(k);
-    });
+    const k = document.createElement('div');
+    k.className = 'rvk';
+    const aF = BVK.annual(p, 'f');
+    k.innerHTML = '<b>' + esc(BVK.displayName(p)) + '</b><div class="s">' + esc(p.gesellschaft || '—') +
+      (p.vsnr ? ' · ' + esc(p.vsnr) : '') +
+      (aF != null ? ' · bisher ' + BVK.fmtNum(aF) + ' €/J' : '') + '</div>';
+    const ta = document.createElement('textarea');
+    ta.value = p.leistRV || '';
+    ta.placeholder = 'Leistungen R+V — eine Angabe pro Zeile';
+    ta.addEventListener('input', () => { p.leistRV = ta.value; speichern(); });
+    k.appendChild(f('Leistungen R+V', ta));
+    const bIn = inp('text', p.beitragRV != null ? BVK.fmtNum(p.beitragRV) : '', 'kein Angebot = leer');
+    bIn.inputMode = 'decimal';
+    const zS = zwSel(p.zwRV);
+    const z = document.createElement('div'); z.className = 'zwei';
+    z.append(f('Beitrag R+V (€)', bIn), f('Zahlweise', zS));
+    k.appendChild(z);
+    const banner = document.createElement('div');
+    function bannerNeu(){
+      const aR = BVK.annual(p, 'rv');
+      if(aF != null && aR != null){
+        const d = aF - aR;
+        banner.className = 'ersbanner';
+        banner.style.display = '';
+        banner.innerHTML = d >= 0
+          ? 'Ersparnis bei diesem Vertrag: <b style="font-family:var(--mono)">' + BVK.fmtNum(d) + ' € / Jahr</b>'
+          : '<span style="color:var(--rot)">Mehrbeitrag: <b style="font-family:var(--mono)">' + BVK.fmtNum(Math.abs(d)) + ' € / Jahr</b></span>';
+      } else banner.style.display = 'none';
+    }
+    bIn.addEventListener('change', () => { p.beitragRV = BVK.parseEuro(bIn.value); p.rv = p.beitragRV != null; speichern(); renderRail(); bannerNeu(); });
+    zS.addEventListener('change', () => { p.zwRV = zS.value; speichern(); renderRail(); bannerNeu(); });
+    k.appendChild(banner);
+    bannerNeu();
+    box.appendChild(k);
     b.appendChild(box);
-    b.appendChild(leiste(true, 'Weiter zum Export →', () => { step = 4; render(); }));
+    b.appendChild(leiste(
+      () => { if(rvIdx > 0){ rvIdx--; render(); } else { step = 2; render(); } },
+      rvIdx < arr.length - 1 ? 'Nächster Vertrag →' : 'Weiter zum Export →',
+      () => { speichernJetzt(); if(rvIdx < arr.length - 1){ rvIdx++; render(); } else { step = 4; render(); } }
+    ));
   }
 
   if(step === 4){
-    const t = BVK.totals(state);
-    const fS = sortiert().reduce((s, p) => s + (BVK.annual(p, 'f') || 0), 0);
-    const rS = sortiert().reduce((s, p) => s + (BVK.annual(p, 'rv') || 0), 0);
-    b.innerHTML = kopf('SCHRITT 4', 'Fertig — Ergebnis für ' + esc((state.kunde || '').trim() || 'den Kunden'), 'Dokument erzeugen; Kündigungen laufen über die klassische Ansicht.');
-    const box = document.createElement('div');
-    box.className = 'fertig';
-    box.innerHTML =
-      '<div class="z"><span>Verträge erfasst</span><b>' + state.policies.length + '</b></div>' +
-      '<div class="z"><span>Bisher / Jahr</span><b>' + BVK.fmtNum(fS) + ' €</b></div>' +
-      '<div class="z"><span>R+V / Jahr</span><b>' + BVK.fmtNum(rS) + ' €</b></div>' +
-      '<div class="z"><span>Differenz / Jahr</span><b class="' + (fS - rS >= 0 ? 'gr' : '') + '">' + (fS - rS < 0 ? '− ' : '') + BVK.fmtNum(Math.abs(fS - rS)) + ' €</b></div>' +
-      (t.save != null ? '<div class="z"><span>Ersparnis (verglichene Verträge)</span><b class="gr">' + BVK.fmtNum(Math.abs(t.save)) + ' €</b></div>' : '');
-    b.appendChild(box);
+    b.innerHTML = kopf('SCHRITT 4', 'Fertig — Ergebnis für ' + esc((state.kunde || '').trim() || 'den Kunden'), 'Dokument erzeugen; Kündigungen direkt am Vertrag über den Editor.');
+    b.appendChild(exportBox());
     const l = document.createElement('div');
     l.className = 'leiste';
-    l.innerHTML = '';
     const bz = document.createElement('button');
     bz.className = 'btn leise'; bz.textContent = '← Zurück';
-    bz.addEventListener('click', () => { step = 3; render(); });
-    const r = document.createElement('div');
-    r.style.display = 'flex'; r.style.gap = '10px'; r.style.flexWrap = 'wrap';
-    const bW = document.createElement('button');
-    bW.className = 'btn ak'; bW.textContent = 'Word-Vergleich erstellen';
-    bW.addEventListener('click', async () => {
-      try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
-      catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
-    });
-    const bK = document.createElement('a');
-    bK.className = 'btn'; bK.textContent = 'Kündigungen (klassisch) ↗'; bK.href = 'index.html';
-    bK.style.textDecoration = 'none';
-    const bN = document.createElement('button');
-    bN.className = 'btn'; bN.textContent = 'Nächste Beratung starten';
-    bN.addEventListener('click', () => {
-      speichern();
-      BVK.neu('');
-      state = BVK.ensureStateShape(BVK.aktiverState());
-      step = 1; wahlSparte = 'phv';
-      render();
-      toast('Neuer Kunde angelegt.');
-    });
-    r.append(bW, bK, bN);
-    l.append(bz, r);
+    bz.addEventListener('click', () => { step = 3; rvIdx = 0; render(); });
+    l.append(bz, exportButtons());
     b.appendChild(l);
   }
 }
+function exportBox(){
+  const arr = sortiert();
+  const t = BVK.totals(state);
+  const fS = arr.reduce((s, p) => s + (BVK.annual(p, 'f') || 0), 0);
+  const rS = arr.reduce((s, p) => s + (BVK.annual(p, 'rv') || 0), 0);
+  const box = document.createElement('div');
+  box.className = 'fertig';
+  box.innerHTML =
+    '<div class="z"><span>Verträge erfasst</span><b>' + state.policies.length + '</b></div>' +
+    '<div class="z"><span>Bisher / Jahr</span><b>' + BVK.fmtNum(fS) + ' €</b></div>' +
+    '<div class="z"><span>R+V / Jahr</span><b>' + BVK.fmtNum(rS) + ' €</b></div>' +
+    '<div class="z"><span>Differenz / Jahr</span><b class="' + (fS - rS >= 0 ? 'gr' : '') + '">' + (fS - rS < 0 ? '− ' : '') + BVK.fmtNum(Math.abs(fS - rS)) + ' €</b></div>' +
+    (t.save != null ? '<div class="z"><span>Ersparnis (verglichene Verträge)</span><b class="gr">' + BVK.fmtNum(Math.abs(t.save)) + ' €</b></div>' : '');
+  return box;
+}
+function exportButtons(){
+  const r = document.createElement('div');
+  r.style.display = 'flex'; r.style.gap = '10px'; r.style.flexWrap = 'wrap';
+  const bW = document.createElement('button');
+  bW.className = 'btn ak'; bW.textContent = 'Word-Vergleich erstellen';
+  bW.addEventListener('click', async () => {
+    if(!state.policies.length){ toast('Noch keine Verträge.'); return; }
+    try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
+    catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
+  });
+  const bN = document.createElement('button');
+  bN.className = 'btn'; bN.textContent = 'Nächste Beratung starten';
+  bN.addEventListener('click', () => {
+    speichernJetzt();
+    BVK.neu('');
+    state = BVK.ensureStateShape(BVK.aktiverState());
+    step = 1; rvIdx = 0; wahlSparte = 'phv'; offen1 = null;
+    render();
+    toast('Neuer Kunde angelegt.');
+  });
+  r.append(bW, bN);
+  return r;
+}
 
+/* ---------- Kompaktmodus ---------- */
+function ksek(nummer, ok, titel, meta){
+  const s = document.createElement('div');
+  s.className = 'ksek';
+  const h = document.createElement('div');
+  h.className = 'kh';
+  h.innerHTML = '<span class="knum' + (ok ? ' ok' : '') + '">' + (ok ? '✓' : nummer) + '</span>' +
+    '<span class="t">' + titel + '</span>' +
+    (meta ? '<span class="m">' + meta + '</span>' : '') +
+    '<span class="sp"></span>';
+  s.appendChild(h);
+  return { s, h };
+}
+function renderKompakt(){
+  $('kzStep').textContent = 'Kompaktmodus — alle Schritte auf einer Seite';
+  const b = $('buehne');
+  b.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'kwrap';
+
+  const fertig1 = !!((state.kunde || '').trim() || (state.absender.name || '').trim());
+  if(offen1 === null) offen1 = !fertig1;
+  const s1 = ksek('1', fertig1, 'Kunde', fertig1 ? esc((state.kunde || '').trim() || '—') + (state.absender.name ? ' · Absender hinterlegt' : '') : 'Name und Absender eintragen');
+  const t1 = document.createElement('span');
+  t1.style.cssText = 'font-size:12px;color:var(--mut);cursor:pointer';
+  t1.textContent = offen1 ? '▴ zuklappen' : '▾ öffnen';
+  s1.h.appendChild(t1);
+  s1.h.style.cursor = 'pointer';
+  s1.h.addEventListener('click', () => { offen1 = !offen1; render(); });
+  if(offen1){
+    const inner = document.createElement('div');
+    inner.style.marginTop = '10px';
+    inner.addEventListener('click', e => e.stopPropagation());
+    const iK = inp('text', state.kunde, 'Familie Mustermann');
+    iK.addEventListener('input', () => { state.kunde = iK.value; speichern(); $('kzTitel').textContent = 'Beratung · ' + (state.kunde.trim() || 'Neuer Kunde'); });
+    inner.appendChild(f('Kunde / Familie', iK));
+    const z = document.createElement('div'); z.className = 'drei';
+    const iN = inp('text', state.absender.name, 'Vorname Nachname');
+    iN.addEventListener('input', () => { state.absender.name = iN.value; speichern(); });
+    const iS = inp('text', state.absender.strasse, 'Straße und Nr.');
+    iS.addEventListener('input', () => { state.absender.strasse = iS.value; speichern(); });
+    const iO = inp('text', state.absender.ort, 'PLZ und Ort');
+    iO.addEventListener('input', () => { state.absender.ort = iO.value; speichern(); });
+    z.append(f('Absender', iN), f('Straße', iS), f('PLZ und Ort', iO));
+    inner.appendChild(z);
+    s1.s.appendChild(inner);
+  }
+  wrap.appendChild(s1.s);
+
+  const arr = sortiert();
+  const s2 = ksek('2', arr.length > 0, 'Verträge erfassen', arr.length + ' erfasst');
+  const add = document.createElement('button');
+  add.className = 'kadd';
+  add.textContent = '+ Vertrag';
+  add.addEventListener('click', () => editor(null));
+  s2.h.appendChild(add);
+  arr.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'krow2';
+    const aF = BVK.annual(p, 'f');
+    row.innerHTML = '<span><b>' + esc(BVK.sparteOf(p).name) + '</b> · ' + esc(p.gesellschaft || '—') +
+      (p.vsnr ? ' · <span style="font-family:var(--mono);font-size:11px;color:var(--mut)">' + esc(p.vsnr) + '</span>' : '') + '</span>' +
+      '<span class="g">' + (aF != null ? BVK.fmtNum(aF) + ' €/J' : '—') + '</span>';
+    row.title = 'Im Editor öffnen';
+    row.addEventListener('click', () => editor(p.id));
+    s2.s.appendChild(row);
+  });
+  if(!arr.length){
+    const le = document.createElement('div');
+    le.style.cssText = 'font-size:12.5px;color:var(--mut);padding:8px 2px';
+    le.textContent = 'Noch keine Verträge — „+ Vertrag" öffnet den Editor.';
+    s2.s.appendChild(le);
+  }
+  wrap.appendChild(s2.s);
+
+  const mitRV = arr.filter(p => BVK.annual(p, 'rv') != null).length;
+  const s3 = ksek('3', mitRV > 0 && mitRV === arr.length, 'R+V-Vergleich', arr.length ? mitRV + ' von ' + arr.length + ' mit Angebot' : '');
+  arr.forEach(p => {
+    const z = document.createElement('div');
+    z.className = 'rvzeile';
+    const bIn = document.createElement('input');
+    bIn.inputMode = 'decimal';
+    bIn.placeholder = '—';
+    bIn.value = p.beitragRV != null ? BVK.fmtNum(p.beitragRV) : '';
+    const zS = zwSel(p.zwRV);
+    const d = document.createElement('span');
+    d.className = 'd';
+    function dNeu(){
+      const aF = BVK.annual(p, 'f'), aR = BVK.annual(p, 'rv');
+      if(aF != null && aR != null){
+        const diff = aF - aR;
+        d.style.color = diff >= 0 ? 'var(--gruen)' : 'var(--rot)';
+        d.textContent = (diff >= 0 ? '−' : '+') + BVK.fmtNum(Math.abs(diff));
+      } else { d.style.color = 'var(--mut)'; d.textContent = '—'; }
+    }
+    bIn.addEventListener('change', () => { p.beitragRV = BVK.parseEuro(bIn.value); p.rv = p.beitragRV != null; speichern(); dNeu(); renderRail(); });
+    zS.addEventListener('change', () => { p.zwRV = zS.value; speichern(); dNeu(); renderRail(); });
+    dNeu();
+    z.innerHTML = '<span>' + esc(BVK.sparteOf(p).name) + ' <span style="color:var(--mut);font-size:11.5px">' + esc(p.gesellschaft || '') + '</span></span>';
+    z.append(bIn, zS, d);
+    s3.s.appendChild(z);
+  });
+  wrap.appendChild(s3.s);
+
+  const s4 = ksek('4', false, 'Export', '');
+  const inner4 = document.createElement('div');
+  inner4.style.marginTop = '10px';
+  inner4.appendChild(exportBox());
+  const btns = exportButtons();
+  btns.style.marginTop = '10px';
+  inner4.appendChild(btns);
+  s4.s.appendChild(inner4);
+  wrap.appendChild(s4.s);
+
+  b.appendChild(wrap);
+}
+
+function render(){
+  $('kzTitel').textContent = 'Beratung · ' + ((state.kunde || '').trim() || 'Neuer Kunde');
+  anwendModus();
+  renderRail();
+  if(modus === 'kompakt') renderKompakt();
+  else renderSchritte();
+}
+
+document.querySelectorAll('.modi button').forEach(b => b.addEventListener('click', () => {
+  modus = b.dataset.m;
+  try{ localStorage.setItem('bv_assistent_modus', modus); }catch(e){}
+  render();
+}));
+$('btnTheme').addEventListener('click', () => {
+  dunkel = !dunkel;
+  try{ localStorage.setItem('bv_assistent_dunkel', dunkel ? '1' : ''); }catch(e){}
+  anwendModus();
+});
 if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'assistent', speichernJetzt);
 $('btnKunden').addEventListener('click', () => {
   if(!hatKern) return;
@@ -369,7 +596,7 @@ $('btnKunden').addEventListener('click', () => {
   const vorher = BVK.aktivId();
   BVK.kundenDialog({ onChange: () => {
     state = BVK.ensureStateShape(BVK.aktiverState());
-    if(BVK.aktivId() !== vorher) step = 1;
+    if(BVK.aktivId() !== vorher){ step = 1; rvIdx = 0; offen1 = null; }
     render();
   }});
 });

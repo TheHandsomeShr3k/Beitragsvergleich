@@ -838,6 +838,217 @@ BVK.kundenDialog = function(opts){
   ov.appendChild(card);
 };
 
+/* ---------- Vertrags-Editor als Overlay (aus jeder Ansicht) ---------- */
+BVK.vertragDialog = function(opts){
+  opts = opts || {};
+  const doc = global.document;
+  const kid = opts.kundeId || BVK.aktivId();
+  const st = BVK.stateVon(kid);
+  if(!st) return;
+  let p = opts.policyId ? st.policies.find(x => x.id === opts.policyId) : null;
+  const neu = !p;
+  if(neu) p = BVK.neuerVertragObjekt();
+  let dl = doc.getElementById('bvkGesL');
+  if(!dl){
+    dl = doc.createElement('datalist');
+    dl.id = 'bvkGesL';
+    [...new Set(Object.values(BVK.adressbuch()).map(v => v.n).concat(BVK.VERZEICHNIS.map(v => v.n)))]
+      .sort((a, b) => a.localeCompare(b, 'de'))
+      .forEach(n => { const o = doc.createElement('option'); o.value = n; dl.appendChild(o); });
+    doc.body.appendChild(dl);
+  }
+  const ov = doc.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.52);z-index:999;display:flex;align-items:flex-start;justify-content:center;padding:4vh 14px;overflow:auto';
+  const card = doc.createElement('div');
+  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:13px;box-shadow:0 24px 60px rgba(10,20,40,.35);width:min(520px,100%);padding:16px 18px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif;margin-bottom:4vh';
+  const F = 'width:100%;box-sizing:border-box;border:1px solid #D9DEE7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#1a2333';
+  const L = 'display:block;font-size:10.5px;letter-spacing:.05em;color:#7a8294;margin:9px 0 3px';
+  card.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">' + (neu ? 'Vertrag erfassen' : 'Vertrag bearbeiten') + ' \u00b7 ' + String((st.kunde || 'Unbenannter Kunde')).replace(/</g,'&lt;') + '</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">\u2715</button></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">SPARTE</label><select data-f="sparte" style="' + F + '"></select></div>' +
+      '<div><label style="' + L + '">GESELLSCHAFT (BISHER)</label><input data-f="ges" list="bvkGesL" style="' + F + '" autocomplete="off"></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">VERSICHERUNGSNUMMER</label><input data-f="vsnr" style="' + F + ';font-family:ui-monospace,monospace"></div>' +
+      '<div><label style="' + L + '">ABLAUF</label><input data-f="ablauf" type="date" style="' + F + '"><div data-frist style="font-size:10.5px;color:#8a6410;margin-top:3px"></div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">PERSONEN / OBJEKT</label><input data-f="personen" style="' + F + '"></div>' +
+      '<div data-extra></div>' +
+    '</div>' +
+    '<label style="' + L + '">LEISTUNGEN \u2014 BISHERIGER VERTRAG (EINE ANGABE PRO ZEILE)</label>' +
+    '<textarea data-f="leistF" style="' + F + ';min-height:56px;resize:vertical" placeholder="z. B. Versicherungssumme 85.000 \u20ac"></textarea>' +
+    '<div style="display:grid;grid-template-columns:1.1fr 1fr .9fr;gap:10px">' +
+      '<div><label style="' + L + '">BEITRAG BISHER (\u20ac)</label><input data-f="beitragF" inputmode="decimal" style="' + F + ';text-align:right;font-family:ui-monospace,monospace"></div>' +
+      '<div><label style="' + L + '">ZAHLWEISE</label><select data-f="zwF" style="' + F + '"></select></div>' +
+      '<div><label style="' + L + '">BEITRAGSSTAND</label><select data-f="jahr" style="' + F + '"></select></div>' +
+    '</div>' +
+    '<label style="' + L + '">LEISTUNGEN \u2014 R+V</label>' +
+    '<textarea data-f="leistRV" style="' + F + ';min-height:56px;resize:vertical"></textarea>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">BEITRAG R+V (\u20ac)</label><input data-f="beitragRV" inputmode="decimal" style="' + F + ';text-align:right;font-family:ui-monospace,monospace" placeholder="leer = 0,00 \u20ac im Dokument"></div>' +
+      '<div><label style="' + L + '">ZAHLWEISE</label><select data-f="zwRV" style="' + F + '"></select></div>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#3a4356;margin-top:9px;flex-wrap:wrap">' +
+      '<span>R+V-Nachlass intern:</span>' +
+      '<input data-f="rabatt" inputmode="decimal" style="width:58px;border:1px solid #D9DEE7;border-radius:7px;padding:5px 7px;font-size:12px;text-align:right;font-family:ui-monospace,monospace">%' +
+      '<label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input data-f="rabattApply" type="checkbox"> einrechnen</label>' +
+      '<span data-eff style="color:#1c7a4d;font-size:11px"></span>' +
+    '</div>' +
+    '<div data-warn style="display:none;color:#B3372B;font-size:12px;margin-top:8px"></div>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:14px">' +
+      (neu ? '' : '<button data-del style="border:1px solid #EFD7D4;background:#fff;color:#B3372B;border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit">L\u00f6schen</button>') +
+      '<span style="flex:1"></span>' +
+      '<button data-ku style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;color:#1a2333">\u2709 K\u00fcndigung</button>' +
+      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Abbrechen</button>' +
+      '<button data-ok style="border:none;background:#274690;color:#fff;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Speichern</button>' +
+    '</div>';
+  const q = s => card.querySelector('[data-f="' + s + '"]');
+  const sSel = q('sparte');
+  BVK.SPARTEN.forEach(s => { const o = doc.createElement('option'); o.value = s.id; o.textContent = s.full; if(s.id === p.sparte) o.selected = true; sSel.appendChild(o); });
+  [q('zwF'), q('zwRV')].forEach((sel, i) => {
+    Object.keys(BVK.ZW).forEach(z => {
+      const o = doc.createElement('option');
+      o.value = z; o.textContent = BVK.ZW[z].l;
+      if(z === (i ? p.zwRV : p.zwF)) o.selected = true;
+      sel.appendChild(o);
+    });
+  });
+  const jSel = q('jahr');
+  const jetzt = new Date().getFullYear();
+  for(let i = 0; i <= 8; i++){
+    const o = doc.createElement('option');
+    o.value = String(jetzt - i);
+    o.textContent = i === 0 ? jetzt + ' (aktuell)' : String(jetzt - i);
+    jSel.appendChild(o);
+  }
+  const jv = String(p.beitragsjahrF || jetzt);
+  if(![...jSel.options].some(o => o.value === jv)){ const o = doc.createElement('option'); o.value = jv; o.textContent = jv; jSel.appendChild(o); }
+  jSel.value = jv;
+  q('ges').value = p.gesellschaft || '';
+  q('vsnr').value = p.vsnr || '';
+  q('ablauf').value = p.ablauf || '';
+  q('personen').value = p.personen || '';
+  q('leistF').value = p.leistF || '';
+  q('beitragF').value = p.beitragF != null ? fmtNum(p.beitragF) : '';
+  q('leistRV').value = p.leistRV || '';
+  q('beitragRV').value = p.beitragRV != null ? fmtNum(p.beitragRV) : '';
+  q('rabatt').value = p.rabatt != null ? String(p.rabatt).replace('.', ',') : '';
+  q('rabattApply').checked = !!p.rabattApply;
+  function extraBauen(){
+    const slot = card.querySelector('[data-extra]');
+    const sp = sSel.value;
+    if(sp === 'kfz'){
+      slot.innerHTML = '<label style="' + L + '">KENNZEICHEN</label><input data-f="kennzeichen" style="' + F + '" placeholder="AB-CD 123">';
+      q('kennzeichen').value = p.kennzeichen || '';
+    } else if(sp === 'so'){
+      slot.innerHTML = '<label style="' + L + '">BEZEICHNUNG</label><input data-f="label" style="' + F + '" placeholder="z. B. Schutzbrief">';
+      q('label').value = p.label || '';
+    } else {
+      slot.innerHTML = '';
+    }
+  }
+  function fristHinweis(){
+    const el = card.querySelector('[data-frist]');
+    const f = fristDate({ sparte: sSel.value, ablauf: q('ablauf').value });
+    if(!f){ el.textContent = ''; return; }
+    const tage = Math.round((f - new Date()) / 864e5);
+    el.textContent = 'K\u00fcndigungsfrist: ' + f.toLocaleDateString('de-DE') + (tage >= 0 ? ' (in ' + tage + ' Tagen)' : ' (vorbei)');
+  }
+  function effHinweis(){
+    const el = card.querySelector('[data-eff]');
+    const b = parseEuro(q('beitragRV').value);
+    const r = parseEuro(q('rabatt').value);
+    if(q('rabattApply').checked && b != null && r > 0){
+      const eff = Math.round(b * (1 - Math.min(r, 100) / 100) * 100) / 100;
+      el.textContent = '\u2192 effektiv ' + fmtNum(eff) + ' \u20ac (Kundendokumente ohne Rabatt-Spuren)';
+    } else el.textContent = '';
+  }
+  extraBauen();
+  fristHinweis();
+  effHinweis();
+  sSel.addEventListener('change', () => { extraBauen(); fristHinweis(); });
+  q('ablauf').addEventListener('change', fristHinweis);
+  q('beitragRV').addEventListener('change', effHinweis);
+  q('rabatt').addEventListener('change', effHinweis);
+  q('rabattApply').addEventListener('change', effHinweis);
+  function sammle(){
+    p.sparte = sSel.value;
+    p.gesellschaft = q('ges').value.trim();
+    p.vsnr = q('vsnr').value.trim();
+    p.ablauf = q('ablauf').value;
+    p.personen = q('personen').value.trim();
+    p.kennzeichen = q('kennzeichen') ? q('kennzeichen').value.trim() : (p.sparte === 'kfz' ? p.kennzeichen : '');
+    p.label = q('label') ? q('label').value.trim() : (p.sparte === 'so' ? p.label : '');
+    p.leistF = q('leistF').value;
+    p.beitragF = parseEuro(q('beitragF').value);
+    p.zwF = q('zwF').value;
+    p.beitragsjahrF = parseInt(jSel.value, 10) || null;
+    p.leistRV = q('leistRV').value;
+    p.beitragRV = parseEuro(q('beitragRV').value);
+    p.rv = p.beitragRV != null;
+    p.zwRV = q('zwRV').value;
+    const r = parseEuro(q('rabatt').value);
+    p.rabatt = (r != null && r > 0) ? Math.min(r, 100) : null;
+    p.rabattApply = q('rabattApply').checked;
+  }
+  function schreibe(){
+    if(neu && !st.policies.some(x => x.id === p.id)) st.policies.push(p);
+    return BVK.speichern(kid, st);
+  }
+  function fertig(art){
+    zu();
+    if(typeof opts.onDone === 'function'){ try{ opts.onDone(kid, art === 'geloescht' ? null : p.id, art); }catch(e){} }
+  }
+  function zu(){ ov.remove(); doc.removeEventListener('keydown', escH); }
+  function escH(e){ if(e.key === 'Escape') zu(); }
+  doc.addEventListener('keydown', escH);
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  card.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', zu));
+  card.querySelector('[data-ok]').addEventListener('click', () => {
+    sammle();
+    if(!p.gesellschaft && !p.vsnr && p.beitragF == null){
+      const w = card.querySelector('[data-warn]');
+      w.textContent = 'Bitte mindestens Gesellschaft, Versicherungsnummer oder Beitrag angeben.';
+      w.style.display = 'block';
+      return;
+    }
+    schreibe();
+    fertig('gespeichert');
+  });
+  const delBtn = card.querySelector('[data-del]');
+  if(delBtn) delBtn.addEventListener('click', () => {
+    if(!global.confirm('Diesen Vertrag endg\u00fcltig l\u00f6schen?')) return;
+    st.policies = st.policies.filter(x => x.id !== p.id);
+    BVK.speichern(kid, st);
+    fertig('geloescht');
+  });
+  card.querySelector('[data-ku]').addEventListener('click', () => {
+    sammle();
+    schreibe();
+    fertig('gespeichert');
+    BVK.kuendDialog({
+      policy: p,
+      kunde: st.kunde,
+      absender: st.absender,
+      kOrtWahl: st.kOrtWahl,
+      onExported: (d, statusSetzen) => {
+        const st2 = BVK.stateVon(kid);
+        if(!st2) return;
+        st2.absender = { name: d.name, strasse: d.strasse, ort: d.plzort };
+        st2.kOrtWahl = d.ortWahl;
+        const pp = st2.policies.find(x => x.id === p.id);
+        if(pp && statusSetzen) pp.status = 'kuendigung';
+        BVK.speichern(kid, st2);
+        if(typeof opts.onDone === 'function'){ try{ opts.onDone(kid, p.id, 'gespeichert'); }catch(e){} }
+      }
+    });
+  });
+  doc.body.appendChild(ov);
+  ov.appendChild(card);
+};
+
 /* ---------- Version, Badge und Speicher-Warnung ---------- */
 BVK.VERSION = '2.1';
 function uiEinhaengen(){
