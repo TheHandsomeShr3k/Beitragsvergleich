@@ -16,8 +16,13 @@ button{font-family:inherit;cursor:pointer}
 .kopf small{color:var(--mut);font-size:12px}
 .kopf select{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12px;background:#fff}
 .chat{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto}
-.me{align-self:flex-end;max-width:80%;background:#1C1F26;color:#fff;border-radius:14px 14px 4px 14px;padding:9px 13px}
+.me{align-self:flex-end;max-width:80%;background:#1C1F26;color:#fff;border-radius:14px 14px 4px 14px;padding:9px 13px;white-space:pre-wrap}
 .bot{align-self:flex-start;max-width:88%;background:#F1F3F8;border-radius:14px 14px 14px 4px;padding:10px 14px;color:#3A3F4A}
+.qchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.qchips button{font-size:12px;border:1px solid #D3D9E5;border-radius:99px;padding:5px 12px;background:#fff;color:var(--mut2);font-weight:500}
+.qchips button:hover{border-color:var(--ak);color:var(--ak)}
+.qchips input{border:1px solid #D3D9E5;border-radius:8px;padding:5px 9px;font-size:12px;background:#fff;font-family:inherit;min-width:0}
+.qok{color:var(--gruen);font-size:12px;font-weight:600}
 .karte{align-self:flex-start;max-width:92%;width:460px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 14px;box-shadow:0 2px 8px rgba(28,31,38,.05)}
 .karte .kz{display:flex;gap:8px;align-items:center}
 .karte .pk{font-size:10px;font-weight:700;background:var(--ak);color:#fff;border-radius:6px;padding:2px 7px}
@@ -28,7 +33,7 @@ button{font-family:inherit;cursor:pointer}
 .kgeld{display:flex;gap:6px}
 .kgeld input{flex:1;text-align:right;font-family:var(--mono)}
 .kgeld select{width:110px}
-.kakt{display:flex;gap:7px;margin-top:10px}
+.kakt{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
 .kakt button{font-size:12px;font-weight:600;border-radius:8px;padding:6px 13px;border:1px solid var(--line);background:#fff}
 .kakt button.ak{background:var(--ak);border-color:var(--ak);color:#fff}
 .vorschl{display:flex;gap:7px;flex-wrap:wrap;align-self:flex-start}
@@ -48,15 +53,10 @@ button{font-family:inherit;cursor:pointer}
 <body>
 <div class="kopf">
   <span><b id="kTitel">Copilot</b> <small id="kSub"></small></span>
-  <button id="btnKunden" type="button" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--mut2);margin-right:6px">Kunden</button>
-  <select id="ansichtSel" aria-label="Ansicht wählen">
-    <option value="copilot">Ansicht: Copilot</option>
-    <option value="home">Home öffnen</option>
-    <option value="pipeline">Pipeline öffnen</option>
-    <option value="dokument">Dokument-Studio öffnen</option>
-    <option value="assistent">Assistent öffnen</option>
-    <option value="klassisch">Klassisch öffnen</option>
-  </select>
+  <span style="display:flex;gap:6px;align-items:center">
+    <button id="btnKunden" type="button" style="border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--mut2)">Kunden</button>
+    <select id="ansichtSel" aria-label="Ansicht wählen"></select>
+  </span>
 </div>
 <div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
 
@@ -67,7 +67,7 @@ button{font-family:inherit;cursor:pointer}
     <input id="ein" type="text" placeholder="Vertrag eintippen — z. B. „phv allianz 737373, 60 € jährlich, ablauf 23.10.26“" autocomplete="off">
     <button id="senden" aria-label="Senden">↑</button>
   </div>
-  <div class="fusshint">Erkannt werden Sparte, Gesellschaft (aus dem 251er-Verzeichnis), Versicherungsnummer, Beitrag mit Zahlweise und Ablaufdatum — alles vor dem Übernehmen korrigierbar. Läuft komplett lokal im Browser.</div>
+  <div class="fusshint">Mehrere Verträge pro Nachricht (Zeilen, Semikolon oder „… und …"), Tippfehler bei Gesellschaften werden toleriert, bei Unklarem fragt der Copilot nach. Läuft komplett lokal im Browser.</div>
 </div>
 <div id="toast" role="status"></div>
 
@@ -94,16 +94,74 @@ function kopfSub(){
   $('kSub').textContent = '· ' + state.policies.length + ' Verträge' + (t.save != null ? ' · Ersparnis ' + BVK.fmtNum(Math.abs(t.save)) + ' €/J' : '');
 }
 
-/* ---------- Parser (regelbasiert, lokal) ---------- */
-const KURZMARKEN = /^(vhv|axa|huk|huk24|ergo|arag|lvm|wgv|dkv|devk|r\+v)$/i;
-const SPARTENWORT = /^(privathaftpflicht|haftpflicht|phv|wohngeb\w*|geb[äa]ude|wg|hausrat|hr|rechtsschutz|rs|unfall|uv|berufsunf\w*|bu|glas|kfz|auto|pkw|kraftfahr\w*|krankenzusatz|zahnzusatz|kzv|versicherung\w*|ablauf|beitrag|j[äa]hrlich|monatlich|halbj\w*|viertelj\w*)$/i;
+/* ---------- Parser (regelbasiert, lokal, mit Unsicherheits-Kennzeichnung) ---------- */
+const KURZMARKEN = /^(vhv|axa|huk|huk24|ergo|arag|lvm|wgv|dkv|devk|r\+v|gvv|vpv|kravag)$/i;
+const SPARTENWORT = /^(privathaftpflicht\w*|haftpflicht\w*|phv|wohngeb\w*|geb[äa]ude\w*|wg|hausrat\w*|hr|rechtsschutz\w*|rs|unfall\w*|uv|berufsunf\w*|bu|glas\w*|gl|kfz|auto\w*|pkw|kraftfahr\w*|krankenzusatz\w*|zahnzusatz\w*|zahn|kzv|versicherung\w*|police|vertrag\w*|ablauf|beitrag\w*|j[äa]hrlich\w*|monatlich\w*|halbj\w*|viertelj\w*|quartal\w*|euro?|eur|mtl|hj|vj)$/i;
+const S_MAP = [
+  [/privathaftpflicht|haftpflicht|\bphv\b/, 'phv'],
+  [/wohngeb|geb[äa]ude|\bwg\b/, 'wg'],
+  [/hausrat|\bhr\b/, 'hr'],
+  [/rechtsschutz|\brs\b/, 'rs'],
+  [/berufsunf|\bbu\b/, 'bu'],
+  [/unfall|\buv\b/, 'uv'],
+  [/glas\b/, 'gl'],
+  [/kfz|kraftfahr|auto\b|pkw/, 'kfz'],
+  [/krankenzusatz|zahnzusatz|zahn\b|\bkzv\b/, 'kzv']
+];
+function levenshtein(a, b, max){
+  if(Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = [];
+  for(let j = 0; j <= b.length; j++) prev[j] = j;
+  for(let i = 1; i <= a.length; i++){
+    const cur = [i];
+    let zeileMin = i;
+    for(let j = 1; j <= b.length; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if(cur[j] < zeileMin) zeileMin = cur[j];
+    }
+    if(zeileMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+let MARKEN = null;
+function marken(){
+  if(MARKEN || !hatKern) return MARKEN || [];
+  MARKEN = [];
+  const seen = new Set();
+  BVK.VERZEICHNIS.forEach(v => {
+    const push = k => {
+      k = String(k || '').toLowerCase();
+      if(k.length >= 4 && !seen.has(k) && !SPARTENWORT.test(k) && !/\d/.test(k)){
+        seen.add(k);
+        MARKEN.push({ k: k, n: v.n });
+      }
+    };
+    push(BVK.normNameV(v.n).split(' ')[0]);
+    (v.al || []).forEach(push);
+  });
+  return MARKEN;
+}
+function fuzzyGes(tok){
+  const t = tok.toLowerCase();
+  if(t.length < 4 || /\d/.test(t) || SPARTENWORT.test(t)) return null;
+  const max = t.length >= 7 ? 2 : 1;
+  let best = null, bd = max + 1;
+  for(const m of marken()){
+    const d = levenshtein(t, m.k, max);
+    if(d < bd){ bd = d; best = m; if(d === 0) break; }
+  }
+  if(!best || bd > max) return null;
+  const kanon = BVK.lookupVersicherer(best.k);
+  return { n: kanon ? kanon.n : best.n, dist: bd };
+}
 function gesKandidat(cand){
   if(!hatKern) return null;
   if(/\d/.test(cand)) return null;
-  if(cand.split(/\s+/).every(w => SPARTENWORT.test(w))) return null;
   const c = cand.trim();
   if(c.length < 2) return null;
   if(c.length < 4 && !KURZMARKEN.test(c)) return null;
+  if(c.split(/\s+/).every(w => SPARTENWORT.test(w))) return null;
   const v = BVK.lookupVersicherer(c);
   if(!v) return null;
   const cn = BVK.normNameV(c);
@@ -111,52 +169,60 @@ function gesKandidat(cand){
   const worte = BVK.normNameV(v.n).split(' ');
   return worte.some(w => w.startsWith(cn.split(' ')[0])) ? v : null;
 }
+function segmentiere(text){
+  const grob = text.split(/\n+|;/).map(s => s.trim()).filter(Boolean);
+  const out = [];
+  grob.forEach(seg => {
+    const teile = seg.split(/\s+und\s+/i);
+    const alleSparte = teile.length > 1 && teile.every(p => S_MAP.some(([re]) => re.test(' ' + p.toLowerCase() + ' ')));
+    if(alleSparte) out.push(...teile.map(s => s.trim()));
+    else out.push(seg);
+  });
+  return out;
+}
 function parseText(text){
   const t = ' ' + text.toLowerCase() + ' ';
-  const sMap = [
-    [/privathaftpflicht|haftpflicht|\bphv\b/, 'phv'],
-    [/wohngeb|geb[äa]ude|\bwg\b/, 'wg'],
-    [/hausrat|\bhr\b/, 'hr'],
-    [/rechtsschutz|\brs\b/, 'rs'],
-    [/berufsunf|\bbu\b/, 'bu'],
-    [/unfall|\buv\b/, 'uv'],
-    [/glas\b/, 'gl'],
-    [/kfz|kraftfahr|auto\b|pkw/, 'kfz'],
-    [/krankenzusatz|zahnzusatz|\bkzv\b/, 'kzv']
-  ];
-  let sparte = 'so';
-  for(const [re, id] of sMap){ if(re.test(t)){ sparte = id; break; } }
+  let sparte = 'so', sparteSicher = false;
+  for(const [re, id] of S_MAP){ if(re.test(t)){ sparte = id; sparteSicher = true; break; } }
 
-  let zw = 'jaehrlich';
-  if(/monatlich|\bmtl\b/.test(t)) zw = 'monatlich';
-  else if(/viertelj|\bvj\b|quartal/.test(t)) zw = 'vierteljaehrlich';
-  else if(/halbj|\bhj\b/.test(t)) zw = 'halbjaehrlich';
+  let zw = 'jaehrlich', zwSicher = false;
+  if(/monatlich|\bmtl\b/.test(t)){ zw = 'monatlich'; zwSicher = true; }
+  else if(/viertelj|\bvj\b|quartal/.test(t)){ zw = 'vierteljaehrlich'; zwSicher = true; }
+  else if(/halbj|\bhj\b/.test(t)){ zw = 'halbjaehrlich'; zwSicher = true; }
+  else if(/j[äa]hrlich|jhrl|p\.a\./.test(t)){ zw = 'jaehrlich'; zwSicher = true; }
 
   let beitrag = null, beitragTok = '';
-  const mB = /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:€|eur\b)/.exec(t);
+  const mB = /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:€|euro?\b|eur\b)/.exec(t) ||
+             /(\d{1,5}(?:[.,]\d{1,2})?)\s+(?=monatlich|mtl\b|viertelj|vj\b|quartal|halbj|hj\b|j[äa]hrlich|jhrl|p\.a\.)/.exec(t);
   if(mB){ beitrag = BVK.parseEuro(mB[1]); beitragTok = mB[1]; }
 
   let ablauf = '', ablaufTok = '';
-  const mD = /(\d{1,2})\.(\d{1,2})\.(\d{2,4})/.exec(t);
+  let mD = /(\d{1,2})\.(\d{1,2})\.(\d{2,4})/.exec(t);
   if(mD){
     let y = +mD[3];
     if(y < 100) y += 2000;
-    ablauf = y + '-' + String(mD[2]).padStart(2,'0') + '-' + String(mD[1]).padStart(2,'0');
+    ablauf = y + '-' + String(mD[2]).padStart(2, '0') + '-' + String(mD[1]).padStart(2, '0');
+    ablaufTok = mD[0];
+  } else if((mD = /(\d{4})-(\d{2})-(\d{2})/.exec(t))){
+    ablauf = mD[1] + '-' + mD[2] + '-' + mD[3];
+    ablaufTok = mD[0];
+  } else if((mD = /\b(\d{1,2})\.(\d{4})\b/.exec(t))){
+    ablauf = mD[2] + '-' + String(mD[1]).padStart(2, '0') + '-01';
     ablaufTok = mD[0];
   }
 
   let vsnr = '';
   for(const tok of text.split(/[\s,;]+/)){
-    const c = tok.replace(/[€]/g,'');
+    const c = tok.replace(/^(vsnr|nr\.?|vertragsnr\.?)[:=]?/i, '').replace(/[€]/g, '');
     if(!/\d/.test(c)) continue;
-    if(c.replace(/\D/g,'').length < 4) continue;
+    if(c.replace(/\D/g, '').length < 4) continue;
     if(ablaufTok && c.includes(ablaufTok)) continue;
     if(beitragTok && c.replace(',', '.').includes(beitragTok.replace(',', '.'))) continue;
     vsnr = c;
     break;
   }
 
-  let ges = '';
+  let ges = '', gesFuzzy = false;
   const worte = text.split(/[\s,;]+/).filter(Boolean);
   outer:
   for(let n = 3; n >= 1; n--){
@@ -165,7 +231,13 @@ function parseText(text){
       if(v){ ges = v.n; break outer; }
     }
   }
-  return { sparte, gesellschaft: ges, vsnr, ablauf, beitrag, zw };
+  if(!ges){
+    for(const w of worte){
+      const f = fuzzyGes(w);
+      if(f){ ges = f.n; gesFuzzy = f.dist > 0; break; }
+    }
+  }
+  return { sparte, sparteSicher, gesellschaft: ges, gesFuzzy, vsnr, ablauf, beitrag, zw, zwSicher };
 }
 
 /* ---------- Chat ---------- */
@@ -214,15 +286,107 @@ function addVorschlaege(){
   chat.appendChild(w);
   scrollEnde();
 }
+
+/* ---------- Rückfragen ---------- */
+const fragenQ = [];
+let frageAktiv = false;
+function frageWeiter(){
+  if(frageAktiv) return;
+  const f = fragenQ.shift();
+  if(!f) return;
+  frageAktiv = true;
+  f(() => { frageAktiv = false; frageWeiter(); });
+}
+function frageBubble(text, bauen, done){
+  const d = document.createElement('div');
+  d.className = 'bot';
+  d.innerHTML = '<div>' + text + '</div>';
+  const chips = document.createElement('div');
+  chips.className = 'qchips';
+  d.appendChild(chips);
+  chat.appendChild(d);
+  scrollEnde();
+  bauen(chips, antwort => {
+    chips.innerHTML = '<span class="qok">✓ ' + esc(antwort) + '</span>';
+    done();
+  });
+}
+function chip(chips, txt, fn){
+  const b = document.createElement('button');
+  b.textContent = txt;
+  b.addEventListener('click', fn);
+  chips.appendChild(b);
+}
+function planeFragen(d, karte){
+  if(!d.sparteSicher){
+    fragenQ.push(done => {
+      if(karte.uebernommen()){ done(); return; }
+      frageBubble('Welche Sparte ist das?', (chips, fertig) => {
+        BVK.SPARTEN.forEach(s => chip(chips, s.name, () => { karte.set('sparte', s.id); fertig(s.name); }));
+      }, done);
+    });
+  }
+  if(d.beitrag != null && !d.zwSicher){
+    fragenQ.push(done => {
+      if(karte.uebernommen()){ done(); return; }
+      frageBubble('Wie wird der Beitrag von ' + BVK.fmtNum(d.beitrag) + ' € gezahlt?', (chips, fertig) => {
+        Object.keys(BVK.ZW).forEach(z => chip(chips, BVK.ZW[z].l, () => { karte.set('zw', z); fertig(BVK.ZW[z].l); }));
+      }, done);
+    });
+  }
+  if(d.gesFuzzy){
+    fragenQ.push(done => {
+      if(karte.uebernommen()){ done(); return; }
+      frageBubble('Gesellschaft war nicht ganz eindeutig — meintest du <b>' + esc(d.gesellschaft) + '</b>?', (chips, fertig) => {
+        chip(chips, 'Ja, passt', () => fertig('übernommen'));
+        chip(chips, 'Nein, Feld leeren', () => { karte.set('gesellschaft', ''); fertig('geleert — bitte auf der Karte eintragen'); });
+      }, done);
+    });
+  } else if(!d.gesellschaft){
+    fragenQ.push(done => {
+      if(karte.uebernommen()){ done(); return; }
+      frageBubble('Welche Gesellschaft ist der bisherige Versicherer?', (chips, fertig) => {
+        const inp = document.createElement('input');
+        inp.setAttribute('list', 'gesListe');
+        inp.placeholder = 'Gesellschaft';
+        inp.style.width = '190px';
+        chips.appendChild(inp);
+        chip(chips, 'Ok', () => {
+          const v = inp.value.trim();
+          if(v) karte.set('gesellschaft', v);
+          fertig(v || 'übersprungen');
+        });
+        chip(chips, 'Überspringen', () => fertig('übersprungen'));
+        inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ const v = inp.value.trim(); if(v) karte.set('gesellschaft', v); fertig(v || 'übersprungen'); } });
+        inp.focus();
+      }, done);
+    });
+  }
+  if(!d.ablauf){
+    fragenQ.push(done => {
+      if(karte.uebernommen()){ done(); return; }
+      frageBubble('Wann läuft der Vertrag ab? (für die Kündigungsfrist)', (chips, fertig) => {
+        const inp = document.createElement('input');
+        inp.type = 'date';
+        chips.appendChild(inp);
+        chip(chips, 'Ok', () => { if(inp.value) karte.set('ablauf', inp.value); fertig(inp.value ? BVK.fmtDate(inp.value) : 'übersprungen'); });
+        chip(chips, 'Überspringen', () => fertig('übersprungen'));
+      }, done);
+    });
+  }
+  frageWeiter();
+}
+
+/* ---------- Karte ---------- */
 function addKarte(d0){
-  const s = BVK.sparteOf({sparte: d0.sparte});
+  const s0 = BVK.sparteOf({ sparte: d0.sparte });
   const k = document.createElement('div');
   k.className = 'karte';
   k.innerHTML =
-    '<div class="kz"><span class="pk">' + s.k + '</span><b>' + esc(s.full) + '</b></div>' +
+    '<div class="kz"><span class="pk">' + s0.k + '</span><b>' + esc(s0.full) + '</b></div>' +
     '<div class="kgrid">' +
       '<div><label>SPARTE</label><select data-f="sparte">' + BVK.SPARTEN.map(x => '<option value="' + x.id + '"' + (x.id === d0.sparte ? ' selected' : '') + '>' + x.name + '</option>').join('') + '</select></div>' +
-      '<div><label>GESELLSCHAFT</label><input data-f="gesellschaft" value="' + esc(d0.gesellschaft) + '" placeholder="—"></div>' +
+      '<div><label>GESELLSCHAFT</label><input data-f="gesellschaft" value="' + esc(d0.gesellschaft) + '" placeholder="—" list="gesListe"></div>' +
       '<div><label>VSNR</label><input data-f="vsnr" value="' + esc(d0.vsnr) + '" placeholder="—" style="font-family:var(--mono)"></div>' +
       '<div><label>ABLAUF</label><input data-f="ablauf" type="date" value="' + esc(d0.ablauf) + '"></div>' +
       '<div style="grid-column:1/-1"><label>BEITRAG BISHER</label><div class="kgeld">' +
@@ -230,20 +394,29 @@ function addKarte(d0){
         '<select data-f="zw">' + Object.keys(BVK.ZW).map(z => '<option value="' + z + '"' + (z === d0.zw ? ' selected' : '') + '>' + BVK.ZW[z].l + '</option>').join('') + '</select>' +
       '</div></div>' +
     '</div>' +
-    '<div class="kakt"><button class="ak" data-a="ok">Übernehmen</button><button data-a="wb">Übernehmen &amp; verfeinern</button><button data-a="nix">Verwerfen</button></div>';
-  const get = f => k.querySelector('[data-f="' + f + '"]').value;
+    '<div class="kakt"><button class="ak" data-a="ok">Übernehmen</button><button data-a="fein">Übernehmen &amp; verfeinern</button><button data-a="nix">Verwerfen</button></div>';
+  const q = f => k.querySelector('[data-f="' + f + '"]');
+  const pkEl = k.querySelector('.pk');
+  const ttEl = k.querySelector('.kz b');
+  q('sparte').addEventListener('change', () => {
+    const s = BVK.sparteOf({ sparte: q('sparte').value });
+    pkEl.textContent = s.k;
+    ttEl.textContent = s.full;
+  });
   function uebernehmen(){
+    if(k.dataset.done) return null;
     const p = {
-      id: 'p' + Date.now() + Math.random().toString(36).slice(2,6), created: Date.now(),
-      sparte: get('sparte'), label: get('sparte') === 'so' ? 'Sonstiger Vertrag' : '',
-      gesellschaft: get('gesellschaft').trim(), vsnr: get('vsnr').trim(), ablauf: get('ablauf'),
-      personen: '', kennzeichen: '', leistF: '', beitragF: BVK.parseEuro(get('beitrag')),
-      zwF: get('zw'), beitragsjahrF: new Date().getFullYear(),
+      id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), created: Date.now(),
+      sparte: q('sparte').value, label: q('sparte').value === 'so' ? 'Sonstiger Vertrag' : '',
+      gesellschaft: q('gesellschaft').value.trim(), vsnr: q('vsnr').value.trim(), ablauf: q('ablauf').value,
+      personen: '', kennzeichen: '', leistF: '', beitragF: BVK.parseEuro(q('beitrag').value),
+      zwF: q('zw').value, beitragsjahrF: new Date().getFullYear(),
       rv: false, leistRV: '', beitragRV: null, zwRV: 'jaehrlich', rabatt: null, rabattApply: false
     };
     state.policies.push(p);
     speichern();
     kopfSub();
+    k.dataset.done = '1';
     k.querySelector('.kakt').innerHTML = '<span style="color:var(--gruen);font-weight:600;font-size:12px">✓ Übernommen</span>';
     let hinweis = 'Übernommen — Vertrag ' + state.policies.length + ' für ' + esc((state.kunde || '').trim() || 'den aktiven Kunden') + '.';
     const f = BVK.fristDate(p);
@@ -256,7 +429,7 @@ function addKarte(d0){
     return p;
   }
   k.querySelector('[data-a="ok"]').addEventListener('click', uebernehmen);
-  k.querySelector('[data-a="wb"]').addEventListener('click', () => {
+  k.querySelector('[data-a="fein"]').addEventListener('click', () => {
     const p = uebernehmen();
     if(!p) return;
     BVK.vertragDialog({
@@ -269,9 +442,22 @@ function addKarte(d0){
       }
     });
   });
-  k.querySelector('[data-a="nix"]').addEventListener('click', () => { k.remove(); });
+  k.querySelector('[data-a="nix"]').addEventListener('click', () => { k.dataset.done = '1'; k.remove(); });
   chat.appendChild(k);
   scrollEnde();
+  return {
+    set(f, val){
+      const el = q(f);
+      if(!el) return;
+      el.value = val;
+      if(f === 'sparte'){
+        const s = BVK.sparteOf({ sparte: val });
+        pkEl.textContent = s.k;
+        ttEl.textContent = s.full;
+      }
+    },
+    uebernommen(){ return !!k.dataset.done; }
+  };
 }
 function verarbeite(text){
   addMe(text);
@@ -301,10 +487,14 @@ function verarbeite(text){
     }
     return;
   }
-  const d = parseText(text);
-  const erkannt = [d.gesellschaft && 'Gesellschaft', d.vsnr && 'VSNR', d.beitrag != null && 'Beitrag', d.ablauf && 'Ablauf'].filter(Boolean);
-  addBot('Erkannt und strukturiert' + (erkannt.length ? ' (' + erkannt.join(', ') + ')' : '') + ' — bitte prüfen:');
-  addKarte(d);
+  const segmente = segmentiere(text);
+  segmente.forEach((seg, i) => {
+    const d = parseText(seg);
+    const erkannt = [d.sparteSicher && 'Sparte', d.gesellschaft && (d.gesFuzzy ? 'Gesellschaft (vermutet)' : 'Gesellschaft'), d.vsnr && 'VSNR', d.beitrag != null && 'Beitrag', d.ablauf && 'Ablauf'].filter(Boolean);
+    addBot((segmente.length > 1 ? 'Vertrag ' + (i + 1) + ' von ' + segmente.length + ': ' : '') + 'Erkannt' + (erkannt.length ? ' — ' + erkannt.join(', ') : ': noch nichts Konkretes') + '. Bitte prüfen:');
+    const karte = addKarte(d);
+    planeFragen(d, karte);
+  });
 }
 
 $('senden').addEventListener('click', () => {
@@ -334,8 +524,16 @@ window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
 window.addEventListener('focus', resync);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
 
+const gesDl = document.createElement('datalist');
+gesDl.id = 'gesListe';
+document.body.appendChild(gesDl);
+if(hatKern){
+  [...new Set(Object.values(BVK.adressbuch()).map(v => v.n).concat(BVK.VERZEICHNIS.map(v => v.n)))]
+    .sort((a, b) => a.localeCompare(b, 'de'))
+    .forEach(n => { const o = document.createElement('option'); o.value = n; gesDl.appendChild(o); });
+}
 kopfSub();
-addBot('Hallo! Tippe einen Vertrag in einem Satz — ich baue daraus die strukturierte Karte. Mit <b>„kunde: Familie Meier"</b> benennst du den aktiven Kunden um, mit <b>„word"</b>, <b>„drucken"</b> oder <b>„sammel"</b> startest du Word-Export, PDF-Druck oder Sammel-Kündigung.');
+addBot('Hallo! Tippe einen Vertrag in einem Satz — oder mehrere, getrennt durch Zeilen, Semikolon oder „… und …". Fehlt etwas Wichtiges, frage ich kurz nach. Befehle: <b>„kunde: Familie Meier"</b>, <b>„word"</b>, <b>„drucken"</b>, <b>„sammel"</b>.');
 addVorschlaege();
 let prefill = '';
 try{ prefill = sessionStorage.getItem('bv_copilot_prefill') || ''; sessionStorage.removeItem('bv_copilot_prefill'); }catch(e){}
