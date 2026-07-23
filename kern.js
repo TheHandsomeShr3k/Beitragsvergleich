@@ -1321,58 +1321,225 @@ BVK.sammelDialog = function(opts){
   ov.appendChild(card);
 };
 
-/* ---------- Willkommens-Popup (erster Besuch oder nach 14 Tagen Pause) ---------- */
+/* ---------- Willkommens-Karussell (erster Besuch, nach Update oder 14 Tagen Pause) ---------- */
+const WK_V = '2';
 function willkommenVielleicht(){
   if(!store) return;
-  let ansicht = null, letzte = 0, gezeigt = 0;
+  let ansicht = null, letzte = 0, wkv = null;
   try{
     ansicht = store.getItem('bv_ansicht');
     letzte = parseInt(store.getItem('bv_letzte_nutzung') || '0', 10) || 0;
-    gezeigt = parseInt(store.getItem('bv_willkommen_ts') || '0', 10) || 0;
+    wkv = store.getItem('bv_willkommen_v');
   }catch(e){}
   const jetzt = Date.now();
   try{ store.setItem('bv_letzte_nutzung', String(jetzt)); }catch(e){}
   if(ansicht === 'uebersicht') return;
-  if(gezeigt && (!letzte || jetzt - letzte <= 14 * 864e5)) return;
+  const zeigen = (wkv !== WK_V) || (letzte && jetzt - letzte > 14 * 864e5);
+  if(!zeigen) return;
   const doc = global.document;
+  const ANS = BVK.ANSICHTEN.filter(a => a.id !== 'uebersicht');
+  let idx = Math.max(0, ANS.findIndex(a => a.id === ansicht));
+  function merken(){
+    try{
+      store.setItem('bv_willkommen_v', WK_V);
+      store.setItem('bv_willkommen_ts', String(Date.now()));
+    }catch(e){}
+  }
+
   const ov = doc.createElement('div');
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.55);z-index:998;display:flex;align-items:flex-start;justify-content:center;padding:7vh 14px;overflow:auto';
+  ov.id = 'bvkWk';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.55);z-index:998;display:flex;align-items:flex-start;justify-content:center;padding:6vh 14px;overflow:auto';
+  const st = doc.createElement('style');
+  st.textContent =
+    '#bvkWk .wkCard{background:#fff;color:#1a2333;border-radius:17px;box-shadow:0 26px 64px rgba(10,20,40,.42);width:min(540px,100%);padding:18px 20px 16px;font:13.5px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;margin-bottom:6vh}' +
+    '#bvkWk .wkView{overflow:hidden;border-radius:14px;touch-action:pan-y}' +
+    '#bvkWk .wkTrack{display:flex;transition:transform .42s cubic-bezier(.22,.9,.32,1)}' +
+    '#bvkWk .wkSlide{flex:0 0 100%;min-width:0}' +
+    '#bvkWk .wkStage{position:relative;height:176px;background:#ECEFF4;border-radius:14px;overflow:hidden}' +
+    '#bvkWk .wkStage *{position:absolute;border-radius:4px}' +
+    '#bvkWk .wkName{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:700;margin:12px 2px 2px}' +
+    '#bvkWk .wkB{font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:99px;padding:2px 8px;background:#EEF0F4;color:#8a93a5}' +
+    '#bvkWk .wkB.e{background:#E4EDFB;color:#274690}' +
+    '#bvkWk .wkDesc{font-size:12.5px;color:#5a6478;margin:0 2px;min-height:38px}' +
+    '#bvkWk .wkNav{display:flex;align-items:center;justify-content:center;gap:14px;margin:10px 0 12px}' +
+    '#bvkWk .wkPf{width:32px;height:32px;border-radius:50%;border:1px solid #D9DEE7;background:#fff;color:#5a6478;font-size:15px;cursor:pointer;font-family:inherit}' +
+    '#bvkWk .wkPf:hover{border-color:#274690;color:#274690}' +
+    '#bvkWk .wkDots{display:flex;gap:7px}' +
+    '#bvkWk .wkDot{width:8px;height:8px;border-radius:50%;background:#D5DAE2;border:none;padding:0;cursor:pointer;transition:all .25s}' +
+    '#bvkWk .wkDot.on{width:22px;border-radius:99px;background:#274690}' +
+    '#bvkWk .wkCta{display:block;width:100%;border:none;background:#274690;color:#fff;border-radius:11px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}' +
+    '#bvkWk .wkCta:active{transform:scale(.99)}' +
+    '#bvkWk .wkFuss{display:flex;justify-content:space-between;align-items:center;margin-top:11px}' +
+    '@keyframes wkIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}' +
+    '@keyframes wkVonRe{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}' +
+    '@keyframes wkVonLi{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}' +
+    '@keyframes wkFill{from{width:10%}to{width:74%}}' +
+    '@keyframes wkBlink{0%,49%{opacity:1}50%,100%{opacity:0}}' +
+    '@keyframes wkPuls{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}' +
+    '#bvkWk .an .a1{animation:wkIn .45s .05s both}' +
+    '#bvkWk .an .a2{animation:wkIn .45s .18s both}' +
+    '#bvkWk .an .a3{animation:wkIn .45s .32s both}' +
+    '#bvkWk .an .a4{animation:wkIn .45s .48s both}' +
+    '#bvkWk .an .a5{animation:wkIn .45s .64s both}' +
+    '#bvkWk .an .a6{animation:wkIn .45s .8s both}' +
+    '#bvkWk .an .a7{animation:wkIn .45s .96s both}' +
+    '#bvkWk .an .a8{animation:wkIn .45s 1.14s both}' +
+    '#bvkWk .an .re1{animation:wkVonRe .5s .1s both}' +
+    '#bvkWk .an .li1{animation:wkVonLi .5s .55s both}' +
+    '#bvkWk .an .wkBarI{animation:wkFill 2.6s ease-in-out .6s infinite alternate}' +
+    '#bvkWk .wkCaret{width:2px !important;height:11px;background:#274690;border-radius:1px;animation:wkBlink 1s steps(1) infinite}' +
+    '#bvkWk .wkPu{animation:wkPuls 1.9s ease-in-out infinite}';
+  ov.appendChild(st);
+
+  const W = '#fff', RAND = '1px solid #DDE2EA', DUNKEL = '#23262B', BLAU = '#274690', GRAU = '#DFE3EA';
+  function el(cls, css, inner){
+    return '<i class="' + cls + '" style="' + css + '">' + (inner || '') + '</i>';
+  }
+  function prevHtml(id){
+    if(id === 'klassisch'){
+      return el('a1', 'left:6%;right:6%;top:7%;height:9%;background:' + DUNKEL) +
+        el('a2', 'left:6%;width:41%;top:22%;bottom:25%;background:' + W + ';border:' + RAND) +
+        el('a3', 'left:10%;width:26%;top:30%;height:6%;background:' + GRAU) +
+        el('a4', 'left:10%;width:30%;top:41%;height:6%;background:' + GRAU) +
+        el('a5', 'left:10%;width:20%;top:52%;height:6%;background:#B9C6DC') +
+        el('a3', 'left:53%;right:6%;top:22%;bottom:25%;background:' + W + ';border:' + RAND) +
+        el('a5', 'left:57%;width:26%;top:30%;height:6%;background:' + GRAU) +
+        el('a6', 'left:57%;width:22%;top:41%;height:6%;background:' + GRAU) +
+        el('a7', 'left:6%;right:6%;bottom:7%;height:11%;background:' + DUNKEL) +
+        el('a8 wkPu', 'right:9%;bottom:9.5%;width:13%;height:6%;background:#6FE0A8;border-radius:99px');
+    }
+    if(id === 'dokument'){
+      return el('a1', 'left:6%;width:35%;top:8%;bottom:8%;background:' + W + ';border:' + RAND) +
+        el('a2', 'left:10%;width:24%;top:16%;height:6%;background:' + GRAU) +
+        el('a3', 'left:10%;width:27%;top:27%;height:6%;background:' + GRAU) +
+        el('a4', 'left:10%;width:17%;top:38%;height:6%;background:#B9C6DC') +
+        '<i class="a4 wkCaret" style="left:28.5%;top:37%"></i>' +
+        el('a2', 'left:47%;right:6%;top:6%;bottom:6%;background:' + W + ';border:' + RAND) +
+        el('a5', 'left:51%;right:10%;top:13%;height:8%;background:' + BLAU) +
+        el('a6', 'left:51%;right:10%;top:27%;height:11%;background:#EDF0F5;border:' + RAND) +
+        el('a7', 'left:51%;right:10%;top:43%;height:11%;background:#EDF0F5;border:' + RAND) +
+        el('a8', 'left:51%;right:10%;top:59%;height:11%;background:#EDF0F5;border:' + RAND) +
+        el('a8', 'left:51%;width:20%;top:78%;height:7%;background:#CFE0CF');
+    }
+    if(id === 'home'){
+      return el('a1', 'left:6%;width:52%;top:8%;height:42%;background:' + DUNKEL + ';border-radius:9px') +
+        el('a2', 'left:10%;width:20%;top:14%;height:5%;background:#4A4F58') +
+        el('a3', 'left:10%;width:26%;top:24%;height:9%;background:#6FE0A8;opacity:.9') +
+        '<i class="a4" style="left:10%;right:46%;top:39%;height:6%;background:#3A3E45;border-radius:99px;overflow:hidden"><i class="wkBarI" style="position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#6FE0A8,#8FB6FF);border-radius:99px"></i></i>' +
+        el('a2', 'left:62%;right:6%;top:8%;height:42%;background:' + W + ';border:' + RAND + ';border-radius:9px') +
+        el('a4', 'left:65%;right:9%;top:16%;height:7%;background:' + GRAU) +
+        el('a5', 'right:9%;width:11%;top:15.5%;height:8%;background:#FBE9E7;border-radius:99px') +
+        el('a5', 'left:65%;right:9%;top:30%;height:7%;background:' + GRAU) +
+        el('a6', 'right:9%;width:11%;top:29.5%;height:8%;background:#FBF2DC;border-radius:99px') +
+        '<i class="a7" style="left:6%;right:6%;top:56%;height:20%;background:#FCFCFA;border:2px dashed #C6CBD6;border-radius:10px"><i class="wkPu" style="position:absolute;left:44%;top:22%;width:11%;height:56%;background:' + DUNKEL + ';border-radius:7px"></i></i>' +
+        el('a8', 'left:6%;right:6%;bottom:6%;height:11%;background:' + W + ';border:' + RAND);
+    }
+    if(id === 'assistent'){
+      return el('a1', 'left:33%;width:6%;top:9%;height:4%;background:' + BLAU + ';border-radius:99px') +
+        el('a2', 'left:41%;width:6%;top:9%;height:4%;background:' + BLAU + ';border-radius:99px') +
+        el('a3', 'left:49%;width:6%;top:9%;height:4%;background:' + BLAU + ';border-radius:99px') +
+        el('a3', 'left:57%;width:6%;top:9%;height:4%;background:#D5DAE2;border-radius:99px') +
+        el('a4', 'left:24%;right:24%;top:20%;height:10%;background:' + DUNKEL) +
+        el('a5', 'left:17%;right:17%;top:38%;bottom:22%;background:' + W + ';border:' + RAND + ';border-radius:9px') +
+        el('a6', 'left:22%;width:32%;top:50%;height:14%;background:#EAF1FC;border:1.5px solid #9DB8E4;border-radius:6px') +
+        el('a7', 'left:22%;right:22%;top:71%;height:9%;background:#E4F2EA;border-radius:6px') +
+        el('a8 wkPu', 'right:20%;bottom:8%;width:17%;height:10%;background:' + BLAU + ';border-radius:7px');
+    }
+    if(id === 'copilot'){
+      return el('re1', 'right:7%;width:47%;top:9%;height:14%;background:' + DUNKEL + ';border-radius:11px 11px 4px 11px') +
+        '<i class="li1" style="left:7%;width:60%;top:30%;height:38%;background:' + W + ';border:' + RAND + ';border-radius:11px 11px 11px 4px">' +
+          '<i style="position:absolute;left:8%;top:14%;width:22%;height:15%;background:#E4EDFB;border-radius:4px"></i>' +
+          '<i style="position:absolute;left:34%;top:14%;width:40%;height:15%;background:' + GRAU + ';border-radius:4px"></i>' +
+          '<i style="position:absolute;left:8%;top:42%;width:66%;height:15%;background:' + GRAU + ';border-radius:4px"></i>' +
+          '<i style="position:absolute;left:8%;top:70%;width:30%;height:16%;background:' + BLAU + ';border-radius:5px"></i>' +
+        '</i>' +
+        el('a7', 'left:7%;width:31%;top:72%;height:9%;background:#E4F2EA;border-radius:99px') +
+        el('a8', 'left:7%;right:7%;bottom:6%;height:13%;background:' + W + ';border:1.5px solid ' + BLAU + ';border-radius:10px');
+    }
+    return '';
+  }
+
+  const gezeigtSchon = wkv != null;
+  const titel = gezeigtSchon ? 'Neu: die Ansichten im Überblick' : 'Willkommen im Bestandsvergleich!';
   const card = doc.createElement('div');
-  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:15px;box-shadow:0 24px 60px rgba(10,20,40,.4);width:min(560px,100%);padding:20px 22px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif;margin-bottom:6vh';
-  function merken(){ try{ store.setItem('bv_willkommen_ts', String(Date.now())); }catch(e){} }
-  function zu(){ merken(); ov.remove(); }
-  const titel = gezeigt ? 'Willkommen zurück!' : 'Willkommen im Bestandsvergleich!';
+  card.className = 'wkCard';
   card.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">' + titel + '</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">✕</button></div>' +
-    '<div style="font-size:13px;color:#5a6478;margin:4px 0 14px">Womit möchtest du arbeiten? Kunden und Verträge sind in jeder Ansicht dieselben — du kannst jederzeit wechseln.</div>' +
-    '<div data-karten style="display:grid;grid-template-columns:1fr 1fr;gap:9px"></div>' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">' +
-      '<a data-alle href="ansichten.html" style="font-size:12.5px;color:#274690;text-decoration:none;font-weight:600">Alle Ansichten mit Vorschau →</a>' +
-      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:7px 15px;font-size:12.5px;cursor:pointer;font-family:inherit;color:#5a6478">Später</button>' +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><b style="font-size:17px">' + titel + '</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">\u2715</button></div>' +
+    '<div style="font-size:12.5px;color:#5a6478;margin-bottom:12px">Wische oder blättere durch die Ansichten — Kunden und Verträge sind überall dieselben.</div>' +
+    '<div class="wkView" data-view><div class="wkTrack" data-track>' +
+    ANS.map(a =>
+      '<div class="wkSlide">' +
+        '<div class="wkStage an" data-stage>' + prevHtml(a.id) + '</div>' +
+        '<div class="wkName">' + a.name + (a.beta ? '<span class="wkB">BETA</span>' : '<span class="wkB e">EMPFOHLEN</span>') + '</div>' +
+        '<div class="wkDesc">' + (a.desc || '') + '</div>' +
+      '</div>'
+    ).join('') +
+    '</div></div>' +
+    '<div class="wkNav">' +
+      '<button class="wkPf" data-zurueck aria-label="Vorherige Ansicht">\u2039</button>' +
+      '<div class="wkDots" data-dots>' + ANS.map((a, i) => '<button class="wkDot" data-dot="' + i + '" aria-label="' + a.name + '"></button>').join('') + '</div>' +
+      '<button class="wkPf" data-vor aria-label="Nächste Ansicht">\u203a</button>' +
+    '</div>' +
+    '<button class="wkCta" data-cta></button>' +
+    '<div class="wkFuss">' +
+      '<a data-alle href="ansichten.html" style="font-size:12px;color:#274690;text-decoration:none;font-weight:600">Alle Ansichten und Verwaltung \u2192</a>' +
+      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;color:#5a6478">Später</button>' +
     '</div>';
-  const wrap = card.querySelector('[data-karten]');
-  BVK.ANSICHTEN.filter(a => a.id !== 'uebersicht').forEach(a => {
-    const k = doc.createElement('button');
-    k.style.cssText = 'text-align:left;border:1.5px solid ' + (a.beta ? '#E3E6EB' : '#274690') + ';background:#fff;border-radius:11px;padding:10px 12px;cursor:pointer;font-family:inherit;color:#1a2333';
-    k.innerHTML =
-      '<span style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600">' + a.name +
-      (a.beta ? '<span style="font-size:9px;font-weight:700;background:#EEF0F4;color:#8a93a5;border-radius:99px;padding:1px 7px">BETA</span>'
-              : '<span style="font-size:9px;font-weight:700;background:#E4EDFB;color:#274690;border-radius:99px;padding:1px 7px">EMPFOHLEN</span>') +
-      '</span>' +
-      '<span style="display:block;font-size:11px;color:#7a8294;margin-top:3px">' + (a.desc || '') + '</span>';
-    k.addEventListener('click', () => {
-      merken();
-      try{ store.setItem('bv_ansicht', a.id); }catch(e){}
-      if(a.id === ansicht){ ov.remove(); return; }
-      global.location.href = a.url;
-    });
-    wrap.appendChild(k);
+
+  const track = card.querySelector('[data-track]');
+  const dots = [...card.querySelectorAll('[data-dot]')];
+  const stages = [...card.querySelectorAll('[data-stage]')];
+  const cta = card.querySelector('[data-cta]');
+  function goTo(i, still){
+    idx = (i + ANS.length) % ANS.length;
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    dots.forEach((d, n) => d.classList.toggle('on', n === idx));
+    const a = ANS[idx];
+    cta.textContent = a.id === ansicht ? 'In dieser Ansicht weitermachen' : a.name + ' öffnen \u2192';
+    if(!still){
+      const s = stages[idx];
+      s.classList.remove('an');
+      void s.offsetWidth;
+      s.classList.add('an');
+    }
+  }
+  function zu(){
+    merken();
+    ov.remove();
+    doc.removeEventListener('keydown', tasten);
+  }
+  function tasten(e){
+    if(e.key === 'Escape') zu();
+    else if(e.key === 'ArrowRight') goTo(idx + 1);
+    else if(e.key === 'ArrowLeft') goTo(idx - 1);
+  }
+  card.querySelector('[data-vor]').addEventListener('click', () => goTo(idx + 1));
+  card.querySelector('[data-zurueck]').addEventListener('click', () => goTo(idx - 1));
+  dots.forEach(d => d.addEventListener('click', () => goTo(parseInt(d.dataset.dot, 10))));
+  cta.addEventListener('click', () => {
+    const a = ANS[idx];
+    merken();
+    try{ store.setItem('bv_ansicht', a.id); }catch(e){}
+    if(a.id === ansicht){ ov.remove(); doc.removeEventListener('keydown', tasten); return; }
+    global.location.href = a.url;
   });
+  const view = card.querySelector('[data-view]');
+  let tx = null;
+  view.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  view.addEventListener('touchend', e => {
+    if(tx == null) return;
+    const d = e.changedTouches[0].clientX - tx;
+    tx = null;
+    if(Math.abs(d) > 42) goTo(idx + (d < 0 ? 1 : -1));
+  }, { passive: true });
   card.querySelector('[data-alle]').addEventListener('click', merken);
   card.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', zu));
   ov.addEventListener('click', e => { if(e.target === ov) zu(); });
-  doc.body.appendChild(ov);
+  doc.addEventListener('keydown', tasten);
   ov.appendChild(card);
+  doc.body.appendChild(ov);
+  goTo(idx, true);
+  requestAnimationFrame(() => goTo(idx));
 }
 
 /* ---------- Version, Badge und Speicher-Warnung ---------- */
