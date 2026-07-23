@@ -256,6 +256,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .pannual{font-size:8.5pt;color:#42536B}
 .ptotal td{background:#EDF2F9;font-weight:700}
 .psave td{font-weight:700;color:#177245}
+.pmehr td{font-weight:700;color:#A62B22}
 .ptable tr{page-break-inside:avoid}
 @media print{
   body{background:#fff}
@@ -1213,28 +1214,28 @@ function contentHtml(p, side){
   if(b!=null){
     h += '<p class="pl pprice">' + fmtNum(b) + ' € ' + ZW[z].l + (jahrAlt ? ' <span class="pannual">(Stand ' + jahrAlt + ')</span>' : '') + '</p>';
     if(z!=='jaehrlich') h += '<p class="pl pannual">≙ ' + fmtNum(b*ZW[z].f) + ' € / Jahr</p>';
+  } else if(side==='rv'){
+    h += '<p class="pl pprice">0,00 €</p>';
   }
   return h;
 }
 function buildPrintHtml(){
   const t = totals();
   const arr = sortedPolicies();
-  const altNote = arr.some(p => beitragsAlt(p))
-    ? '<p class="pannual" style="margin-top:6px">Hinweis: Beiträge des bisherigen Versicherers teilweise mit älterem Stand — Jahresangabe jeweils beim Vertrag.</p>'
-    : '';
+
   let rows = '';
   arr.forEach(p => {
     const meta = metaLines(p).map(l => '<p class="pl' + (l.sp?' sp':'') + '">' + esc(l.t) + '</p>').join('');
     rows += '<tr><td class="pmeta">' + meta + '</td><td>' + (contentHtml(p,'f')||'') + '</td><td>' + (contentHtml(p,'rv')||'') + '</td></tr>';
   });
+  const fTot = arr.reduce((s, p) => s + (annual(p, 'f') || 0), 0);
+  const rTot = arr.reduce((s, p) => s + (annual(p, 'rv') || 0), 0);
+  const diff = fTot - rTot;
   let totalRow = '<tr class="ptotal"><td>Gesamtsumme / Jahr</td>' +
-    '<td>' + (t.f==null?'':fmtNum(t.f)+' €') + '</td>' +
-    '<td>' + (t.r==null?'':fmtNum(t.r)+' €') + '</td></tr>';
-  let saveRow = '';
-  if(t.save!=null){
-    saveRow = '<tr class="psave"><td colspan="2">Ersparnis / Jahr (verglichene Verträge)</td>' +
-      '<td>' + (t.save>=0?'':'−') + fmtNum(Math.abs(t.save)) + ' €' + (t.save<0?' Mehrbeitrag':'') + '</td></tr>';
-  }
+    '<td>' + fmtNum(fTot) + ' €</td>' +
+    '<td>' + fmtNum(rTot) + ' €</td></tr>';
+  let saveRow = '<tr class="' + (diff >= 0 ? 'psave' : 'pmehr') + '"><td colspan="2">Differenz / Jahr (bisher − R+V)</td>' +
+    '<td>' + (diff < 0 ? '− ' : '') + fmtNum(Math.abs(diff)) + ' €' + (diff < 0 ? ' Mehrbeitrag' : '') + '</td></tr>';
   return '<div class="psheet">' +
     '<h1>BEITRÄGE</h1>' +
     (state.kunde ? '<p class="fam">' + esc(state.kunde) + '</p>' : '') +
@@ -1242,7 +1243,7 @@ function buildPrintHtml(){
     '<table class="ptable"><colgroup><col style="width:27%"><col style="width:36.5%"><col style="width:36.5%"></colgroup>' +
     '<tr><th class="meta-h">Vertrag</th><th>' + esc(state.spalte || 'Anderer Versicherer') + '</th><th>R+V</th></tr>' +
     rows + totalRow + saveRow +
-    '</table>' + altNote + '</div>';
+    '</table></div>';
 }
 function openPreview(){
   if(!state.policies.length){ toast('Noch keine Verträge erfasst.'); return; }
@@ -1513,21 +1514,25 @@ function docContentParas(p, side){
   const leist = side==='rv' ? p.leistRV : p.leistF;
   const b = side==='rv' ? rvEffective(p) : p.beitragF;
   const z = side==='rv' ? p.zwRV : p.zwF;
+  const jahrAlt = side !== 'rv' ? beitragsAlt(p) : null;
   const paras = [];
   if(leist) leist.split(/\r?\n/).filter(x=>x.trim()).forEach(l => paras.push(wP([wRun(l)])));
-  const jahrAlt = side !== 'rv' ? beitragsAlt(p) : null;
   if(b!=null){
     const priceRuns = [wRun(fmtNum(b) + ' € ' + ZW[z].l, {b:true})];
     if(jahrAlt) priceRuns.push(wRun(' (Stand ' + jahrAlt + ')', {sz:17, color:'44546A'}));
     paras.push(wP(priceRuns, {before:60}));
     if(z!=='jaehrlich') paras.push(wP([wRun('≙ ' + fmtNum(b*ZW[z].f) + ' € / Jahr', {sz:17, color:'44546A'})]));
+  } else if(side==='rv'){
+    paras.push(wP([wRun('0,00 €', {b:true})]));
   }
   return paras;
 }
 function buildDocumentXml(){
   const W1 = 2700, W2 = 3469, W3 = 3469;
-  const t = totals();
   const arr = sortedPolicies();
+  const fSum = arr.reduce((s, p) => s + (annual(p, 'f') || 0), 0);
+  const rSum = arr.reduce((s, p) => s + (annual(p, 'rv') || 0), 0);
+  const diff = fSum - rSum;
 
   let rows = '';
   // Kopfzeile
@@ -1541,24 +1546,22 @@ function buildDocumentXml(){
     const meta = metaLines(p).map(l => wP([wRun(l.t, {i:true, b:!!l.sp})]));
     rows += '<w:tr>' +
       wTc(meta, W1) +
-      wTc(docContentParas(p,'f'), W2) +
-      wTc(docContentParas(p,'rv'), W3) +
+      wTc(docContentParas(p, 'f'), W2) +
+      wTc(docContentParas(p, 'rv'), W3) +
       '</w:tr>';
   });
   // Gesamtsumme
   rows += '<w:tr>' +
     wTc([wP([wRun('Gesamtsumme / Jahr', {b:true})])], W1, {fill:'EDF2F9'}) +
-    wTc([wP([wRun(t.f==null ? '' : fmtNum(t.f) + ' €', {b:true})])], W2, {fill:'EDF2F9'}) +
-    wTc([wP([wRun(t.r==null ? '' : fmtNum(t.r) + ' €', {b:true})])], W3, {fill:'EDF2F9'}) +
+    wTc([wP([wRun(fmtNum(fSum) + ' €', {b:true})])], W2, {fill:'EDF2F9'}) +
+    wTc([wP([wRun(fmtNum(rSum) + ' €', {b:true})])], W3, {fill:'EDF2F9'}) +
     '</w:tr>';
-  // Ersparnis
-  if(t.save!=null){
-    const txt = (t.save<0 ? '−' : '') + fmtNum(Math.abs(t.save)) + ' €' + (t.save<0 ? ' Mehrbeitrag' : '');
-    rows += '<w:tr>' +
-      wTc([wP([wRun('Ersparnis / Jahr (verglichene Verträge)', {b:true})])], W1 + W2, {span:2}) +
-      wTc([wP([wRun(txt, {b:true, color: t.save>=0 ? '177245' : 'A62B22'})])], W3) +
-      '</w:tr>';
-  }
+  // Differenz
+  const diffTxt = (diff < 0 ? '− ' : '') + fmtNum(Math.abs(diff)) + ' €' + (diff < 0 ? ' Mehrbeitrag' : '');
+  rows += '<w:tr>' +
+    wTc([wP([wRun('Differenz / Jahr (bisher − R+V)', {b:true})])], W1 + W2, {span:2}) +
+    wTc([wP([wRun(diffTxt, {b:true, color: diff >= 0 ? '177245' : 'A62B22'})])], W3) +
+    '</w:tr>';
 
   const borders =
     '<w:tblBorders>' +
@@ -1581,7 +1584,6 @@ function buildDocumentXml(){
     '<w:tblGrid><w:gridCol w:w="' + W1 + '"/><w:gridCol w:w="' + W2 + '"/><w:gridCol w:w="' + W3 + '"/></w:tblGrid>' +
     rows +
     '</w:tbl>' +
-    (arr.some(p => beitragsAlt(p)) ? wP([wRun('Hinweis: Beiträge des bisherigen Versicherers teilweise mit älterem Stand — Jahresangabe jeweils beim Vertrag.', {sz:17, color:'44546A'})], {before:80}) : '') +
     '<w:p/>' +
     '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>' +
     '</w:body></w:document>';
