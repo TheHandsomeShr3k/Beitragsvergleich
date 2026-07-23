@@ -69,12 +69,12 @@ button{font-family:inherit;cursor:pointer}
   <div class="r">
     <span class="live">● Live synchron</span>
     <button class="btn" id="btnKunden">Kunden</button>
+    <button class="btn" id="btnSammel">Sammel-Kündigung</button>
     <button class="btn" id="btnPrint">Drucken / PDF</button>
     <button class="btn ak" id="btnWord">Word herunterladen</button>
     <select id="ansichtSel" aria-label="Ansicht wählen">
       <option value="dokument">Ansicht: Dokument-Studio</option>
       <option value="home">Home öffnen</option>
-      <option value="werkbank">Werkbank öffnen</option>
       <option value="pipeline">Pipeline öffnen</option>
       <option value="assistent">Assistent öffnen</option>
       <option value="copilot">Copilot öffnen</option>
@@ -306,6 +306,11 @@ function renderAll(){ renderKopf(); renderVListe(); renderEditor(); renderBlatt(
 $('d_kunde').addEventListener('input', e => { state.kunde = e.target.value; speichern(); renderBlatt(); $('titel').textContent = 'Dokument-Studio · ' + (state.kunde.trim() || 'Unbenannter Kunde'); });
 $('d_spalte').addEventListener('input', e => { state.spalte = e.target.value; speichern(); renderBlatt(); });
 $('btnPrint').addEventListener('click', () => window.print());
+$('btnSammel').addEventListener('click', () => {
+  if(!hatKern) return;
+  speichernJetzt();
+  BVK.sammelDialog({ onDone: n => { state = BVK.ensureStateShape(BVK.aktiverState()); renderAll(); toast(n + ' Kündigung' + (n === 1 ? '' : 'en') + ' erstellt.'); } });
+});
 $('btnKunden').addEventListener('click', () => {
   if(!hatKern) return;
   speichernJetzt();

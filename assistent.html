@@ -450,7 +450,20 @@ function exportButtons(){
     render();
     toast('Neuer Kunde angelegt.');
   });
-  r.append(bW, bN);
+  const bP = document.createElement('button');
+  bP.className = 'btn'; bP.textContent = 'Drucken / PDF';
+  bP.addEventListener('click', () => {
+    if(!state.policies.length){ toast('Noch keine Verträge.'); return; }
+    speichernJetzt();
+    BVK.druckeVergleich(state);
+  });
+  const bS = document.createElement('button');
+  bS.className = 'btn'; bS.textContent = 'Sammel-Kündigung';
+  bS.addEventListener('click', () => {
+    speichernJetzt();
+    BVK.sammelDialog({ onDone: n => { state = BVK.ensureStateShape(BVK.aktiverState()); render(); toast(n + ' Kündigung' + (n === 1 ? '' : 'en') + ' erstellt.'); } });
+  });
+  r.append(bW, bP, bS, bN);
   return r;
 }
 

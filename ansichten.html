@@ -113,9 +113,6 @@ function prev(id){
         box('left:7%;width:42%;bottom:12%;height:26%;background:' + P.b + ';border:1px solid ' + P.l) +
         box('left:53%;width:19%;bottom:12%;height:26%;background:' + P.b + ';border:1px solid ' + P.l) +
         box('right:7%;width:19%;bottom:12%;height:26%;background:' + P.b + ';border:1px solid ' + P.l);
-  } else if(id === 'werkbank'){
-    h = box('left:6%;width:22%;top:8%;bottom:8%;background:#EDEDEA;border:1px solid ' + P.l);
-    for(let i = 0; i < 4; i++) h += box('left:33%;right:7%;top:' + (14 + i * 19) + '%;height:12%;background:' + P.b + ';border:1px solid ' + P.l);
   } else if(id === 'pipeline'){
     for(let i = 0; i < 4; i++){
       h += box('left:' + (6 + i * 23.5) + '%;width:20%;top:10%;bottom:10%;background:#E4E8EE');
@@ -140,7 +137,6 @@ const BESCHREIBUNG = {
   klassisch: 'Das bewährte Volltool: Erfassung, Rabattrechner, Word/PDF, Kündigungen, Adressbuch, Designs.',
   dokument: 'Links eingeben, rechts baut sich das Kundendokument live als A4-Vorschau auf. Direkt drucken oder als Word laden.',
   home: 'Bento-Startseite mit Jahresbilanz, Ersparnis-Ring und Fristen-Radar über alle Kunden.',
-  werkbank: 'Kundenliste links, Bestand als Tabelle mit Inline-Bearbeitung, Detail-Editor je Zeile und ⌘K-Befehlspalette.',
   assistent: 'Geführter 4-Schritte-Ablauf für die komplette Beratung — ideal zum Delegieren.',
   copilot: 'Vertrag als Satz eintippen, der lokale Parser baut die strukturierte Karte daraus.'
 };

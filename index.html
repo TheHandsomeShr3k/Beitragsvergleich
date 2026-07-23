@@ -484,7 +484,6 @@ try{
     <select id="ansichtSel" class="theme-sel" aria-label="Ansicht wählen">
       <option value="klassisch">Ansicht: Klassisch</option>
       <option value="home">Home öffnen</option>
-      <option value="werkbank">Werkbank öffnen</option>
       <option value="pipeline">Pipeline öffnen</option>
       <option value="dokument">Dokument-Studio öffnen</option>
       <option value="assistent">Assistent öffnen</option>
@@ -2255,7 +2254,7 @@ document.addEventListener('visibilitychange', () => { if(!document.hidden) kernR
     return;
   }
   sel.value = 'klassisch';
-  const ZIELE = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html' };
+  const ZIELE = { home:'home.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html' };
   sel.addEventListener('change', () => {
     const v = sel.value;
     sel.value = 'klassisch';

@@ -52,7 +52,6 @@ button{font-family:inherit;cursor:pointer}
   <select id="ansichtSel" aria-label="Ansicht wählen">
     <option value="copilot">Ansicht: Copilot</option>
     <option value="home">Home öffnen</option>
-    <option value="werkbank">Werkbank öffnen</option>
     <option value="pipeline">Pipeline öffnen</option>
     <option value="dokument">Dokument-Studio öffnen</option>
     <option value="assistent">Assistent öffnen</option>
@@ -203,8 +202,15 @@ function addVorschlaege(){
     try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
     catch(e){ toast('Export fehlgeschlagen — Internet nötig.'); }
   });
-  mk('Werkbank öffnen', () => { speichern(); location.href = 'werkbank.html'; });
-  mk('Kündigungen (klassisch)', () => { speichern(); location.href = 'index.html'; });
+  mk('Drucken / PDF', () => {
+    if(!state.policies.length){ toast('Noch keine Verträge.'); return; }
+    speichern();
+    BVK.druckeVergleich(state);
+  });
+  mk('Sammel-Kündigung', () => {
+    speichern();
+    BVK.sammelDialog({ onDone: n => { state = BVK.ensureStateShape(BVK.aktiverState()); kopfSub(); addBot(n + ' Kündigung' + (n === 1 ? '' : 'en') + ' erstellt.'); } });
+  });
   chat.appendChild(w);
   scrollEnde();
 }
@@ -224,9 +230,9 @@ function addKarte(d0){
         '<select data-f="zw">' + Object.keys(BVK.ZW).map(z => '<option value="' + z + '"' + (z === d0.zw ? ' selected' : '') + '>' + BVK.ZW[z].l + '</option>').join('') + '</select>' +
       '</div></div>' +
     '</div>' +
-    '<div class="kakt"><button class="ak" data-a="ok">Übernehmen</button><button data-a="wb">In Werkbank verfeinern</button><button data-a="nix">Verwerfen</button></div>';
+    '<div class="kakt"><button class="ak" data-a="ok">Übernehmen</button><button data-a="wb">Übernehmen &amp; verfeinern</button><button data-a="nix">Verwerfen</button></div>';
   const get = f => k.querySelector('[data-f="' + f + '"]').value;
-  k.querySelector('[data-a="ok"]').addEventListener('click', () => {
+  function uebernehmen(){
     const p = {
       id: 'p' + Date.now() + Math.random().toString(36).slice(2,6), created: Date.now(),
       sparte: get('sparte'), label: get('sparte') === 'so' ? 'Sonstiger Vertrag' : '',
@@ -245,10 +251,24 @@ function addKarte(d0){
       const tage = Math.round((f - new Date()) / 864e5);
       if(tage >= 0 && tage <= 90) hinweis += ' <b>Hinweis:</b> Kündigungsfrist läuft in ' + tage + ' Tagen ab (' + BVK.fmtDate(p.ablauf) + ' Ablauf).';
     }
-    addBot(hinweis + ' Leistungen und R+V-Angebot ergänzt du am schnellsten in der Werkbank.');
+    addBot(hinweis + ' Leistungen und R+V ergänzt du über „Übernehmen &amp; verfeinern" oder per Klick auf den Vertrag in Home.');
     addVorschlaege();
+    return p;
+  }
+  k.querySelector('[data-a="ok"]').addEventListener('click', uebernehmen);
+  k.querySelector('[data-a="wb"]').addEventListener('click', () => {
+    const p = uebernehmen();
+    if(!p) return;
+    BVK.vertragDialog({
+      kundeId: BVK.aktivId(),
+      policyId: p.id,
+      onDone: (kk, id, art) => {
+        state = BVK.ensureStateShape(BVK.aktiverState());
+        kopfSub();
+        toast(art === 'geloescht' ? 'Vertrag gelöscht.' : 'Vertrag gespeichert.');
+      }
+    });
   });
-  k.querySelector('[data-a="wb"]').addEventListener('click', () => { speichern(); location.href = 'werkbank.html'; });
   k.querySelector('[data-a="nix"]').addEventListener('click', () => { k.remove(); });
   chat.appendChild(k);
   scrollEnde();
@@ -257,6 +277,17 @@ function verarbeite(text){
   addMe(text);
   if(!hatKern){ addBot('Kern nicht geladen — bitte kern.js mit hochladen.'); return; }
   const t = text.toLowerCase();
+  if(/^(druck|pdf)/.test(t)){
+    if(!state.policies.length){ addBot('Noch keine Verträge zum Drucken.'); return; }
+    speichern();
+    BVK.druckeVergleich(state);
+    return;
+  }
+  if(/^sammel/.test(t)){
+    speichern();
+    BVK.sammelDialog({ onDone: n => { state = BVK.ensureStateShape(BVK.aktiverState()); kopfSub(); addBot(n + ' Kündigung' + (n === 1 ? '' : 'en') + ' erstellt.'); } });
+    return;
+  }
   if(/^(word|export|dokument)/.test(t)){
     BVK.exportVergleichDocx(state).then(() => toast('Word-Datei erstellt.')).catch(() => toast('Export fehlgeschlagen.'));
     return;
@@ -304,7 +335,7 @@ window.addEventListener('focus', resync);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
 
 kopfSub();
-addBot('Hallo! Tippe einen Vertrag in einem Satz — ich baue daraus die strukturierte Karte. Mit <b>„kunde: Familie Meier"</b> benennst du den aktiven Kunden um, mit <b>„word"</b> startest du den Export.');
+addBot('Hallo! Tippe einen Vertrag in einem Satz — ich baue daraus die strukturierte Karte. Mit <b>„kunde: Familie Meier"</b> benennst du den aktiven Kunden um, mit <b>„word"</b>, <b>„drucken"</b> oder <b>„sammel"</b> startest du Word-Export, PDF-Druck oder Sammel-Kündigung.');
 addVorschlaege();
 let prefill = '';
 try{ prefill = sessionStorage.getItem('bv_copilot_prefill') || ''; sessionStorage.removeItem('bv_copilot_prefill'); }catch(e){}

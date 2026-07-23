@@ -414,13 +414,12 @@ BVK.exportVergleichDocx = async function(state){
 
 /* ---------- Ansichten-Menü (feste Reihenfolge, überall gleich) ---------- */
 BVK.ANSICHTEN = [
-  { id:'klassisch',  name:'Klassisch',       url:'index.html' },
-  { id:'dokument',   name:'Dokument-Studio', url:'dokument.html' },
-  { id:'home',       name:'Home',            url:'home.html',      beta:true },
-  { id:'werkbank',   name:'Werkbank',        url:'werkbank.html',  beta:true },
-  { id:'assistent',  name:'Assistent',       url:'assistent.html', beta:true },
-  { id:'copilot',    name:'Copilot',         url:'copilot.html',   beta:true },
-  { id:'uebersicht', name:'Alle Ansichten und Verwaltung …', url:'ansichten.html' }
+  { id:'klassisch',  name:'Klassisch',       url:'index.html',     desc:'Das bewährte Volltool — Erfassung, Rabatte, Word/PDF, Kündigungen, Adressbuch.' },
+  { id:'dokument',   name:'Dokument-Studio', url:'dokument.html',  desc:'Links tippen, rechts entsteht das Kundendokument live als A4 — Drucken und Word direkt.' },
+  { id:'home',       name:'Home',            url:'home.html',      beta:true, desc:'Cockpit mit Jahresbilanz, Fristen-Radar und klickbarem Bestand samt Editor.' },
+  { id:'assistent',  name:'Assistent',       url:'assistent.html', beta:true, desc:'Geführte Beratung in vier Schritten — Präsentationsmodus fürs Kundengespräch.' },
+  { id:'copilot',    name:'Copilot',         url:'copilot.html',   beta:true, desc:'Verträge als Satz eintippen — Karte prüfen, übernehmen, fertig.' },
+  { id:'uebersicht', name:'Alle Ansichten und Verwaltung …', url:'ansichten.html', desc:'Vorschau aller Ansichten, Kundenverwaltung, Sicherungen.' }
 ];
 BVK.ansichtMenu = function(sel, aktuell, vorWechsel){
   if(!sel) return;
@@ -490,7 +489,7 @@ BVK.schnellVertrag = function(opts){
       '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Abbrechen</button>' +
       '<button data-ok style="border:none;background:#274690;color:#fff;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Speichern</button>' +
     '</div>' +
-    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Leistungen, R+V-Angebot und Nachlass ergänzt du danach am schnellsten in der Werkbank.</div>';
+    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Leistungen, R+V-Angebot und Nachlass ergänzt du danach per Klick auf den Vertrag (Editor).</div>';
   const q = s => card.querySelector(s);
   const kSel = q('[data-f="kunde"]');
   const kunden = BVK.liste();
@@ -685,7 +684,7 @@ BVK.kuendDialog = function(opts){
       '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Abbrechen</button>' +
       '<button data-ok style="border:none;background:#274690;color:#fff;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Als Word erstellen</button>' +
     '</div>' +
-    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Drucken und Sammel-Kündigungen weiterhin über die klassische Ansicht.</div>';
+    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Für Papier: Sammel-Kündigung nutzen (druckt alle) oder die Word-Datei drucken.</div>';
   const q = s => card.querySelector('[data-f="' + s + '"]');
   q('name').value = abs.name || '';
   q('strasse').value = abs.strasse || '';
@@ -1049,6 +1048,333 @@ BVK.vertragDialog = function(opts){
   ov.appendChild(card);
 };
 
+/* ---------- Gemeinsame Druckzone (Vergleich und Briefe) ---------- */
+function druckZone(){
+  const doc = global.document;
+  let z = doc.getElementById('bvkPrintZone');
+  if(z) return z;
+  const st = doc.createElement('style');
+  st.id = 'bvkPrintCss';
+  st.textContent =
+    '#bvkPrintZone{display:none}' +
+    '@media print{' +
+      'body.bvkDruck > :not(#bvkPrintZone){display:none !important}' +
+      'body.bvkDruck #bvkPrintZone{display:block !important}' +
+      '#bvkPrintZone{color:#111;font-family:-apple-system,\'Segoe UI\',Roboto,sans-serif}' +
+      '#bvkPrintZone .bvkblatt{font-size:11px;line-height:1.45}' +
+      '#bvkPrintZone h1{margin:0;font-size:17px;letter-spacing:.12em}' +
+      '#bvkPrintZone .kd{font-size:12.5px;font-weight:700;margin-top:2px}' +
+      '#bvkPrintZone .meta{font-size:9.5px;color:#5B6B80;margin-bottom:9px}' +
+      '#bvkPrintZone table{width:100%;border-collapse:collapse;font-size:9.5px}' +
+      '#bvkPrintZone td,#bvkPrintZone th{border:.75pt solid #7A8BA0;padding:4px 6px;vertical-align:top;text-align:left}' +
+      '#bvkPrintZone th.v{background:#EDF2F9;color:#42536B;width:28%}' +
+      '#bvkPrintZone th.b{background:#0E4DA4;color:#fff}' +
+      '#bvkPrintZone .m{font-style:italic}' +
+      '#bvkPrintZone .pr{font-weight:700}' +
+      '#bvkPrintZone .an{color:#42536B;font-size:8.5px}' +
+      '#bvkPrintZone .tot td{background:#EDF2F9;font-weight:700}' +
+      '#bvkPrintZone .df td{font-weight:700}' +
+      '#bvkPrintZone .df .gr{color:#177245}' +
+      '#bvkPrintZone .df .rd{color:#A62B22}' +
+      '#bvkPrintZone .bvkpage{page-break-after:always;font-size:12pt;line-height:1.55}' +
+      '#bvkPrintZone .bvkpage:last-child{page-break-after:auto}' +
+      '#bvkPrintZone .bvkpage p{margin:0 0 5pt}' +
+      '#bvkPrintZone .bvkpage .leer{height:12pt}' +
+      '#bvkPrintZone .bvkpage .re{text-align:right;margin:16pt 0}' +
+      '#bvkPrintZone .bvkpage .bet{font-weight:700;margin:12pt 0 10pt}' +
+      '#bvkPrintZone .bvkpage .sig{margin-top:42pt}' +
+    '}';
+  doc.head.appendChild(st);
+  z = doc.createElement('div');
+  z.id = 'bvkPrintZone';
+  doc.body.appendChild(z);
+  return z;
+}
+function drucke(html){
+  const doc = global.document;
+  const z = druckZone();
+  z.innerHTML = html;
+  doc.body.classList.add('bvkDruck');
+  const fertig = () => {
+    doc.body.classList.remove('bvkDruck');
+    global.removeEventListener('afterprint', fertig);
+  };
+  global.addEventListener('afterprint', fertig);
+  setTimeout(() => global.print(), 40);
+}
+function vglZelleHtml(p, side){
+  const leist = side === 'rv' ? p.leistRV : p.leistF;
+  const b = side === 'rv' ? rvEffective(p) : p.beitragF;
+  const z = side === 'rv' ? p.zwRV : p.zwF;
+  const alt = side !== 'rv' ? beitragsAlt(p) : null;
+  let h = '';
+  if(leist) h += leist.split(/\r?\n/).filter(x => x.trim()).map(l => '<div>' + xEsc(l) + '</div>').join('');
+  if(b != null){
+    h += '<div class="pr">' + fmtNum(b) + ' € ' + BVK.ZW[z].l + (alt ? ' <span class="an">(Stand ' + alt + ')</span>' : '') + '</div>';
+    if(z !== 'jaehrlich') h += '<div class="an">≙ ' + fmtNum(b * BVK.ZW[z].f) + ' € / Jahr</div>';
+  } else if(side === 'rv'){
+    h += '<div class="pr">0,00 €</div>';
+  }
+  return h;
+}
+BVK.druckeVergleich = function(state){
+  state = ensureStateShape(state);
+  const arr = [...state.policies].sort((a, b) => (a.created || 0) - (b.created || 0));
+  const fS = arr.reduce((s, p) => s + (annual(p, 'f') || 0), 0);
+  const rS = arr.reduce((s, p) => s + (annual(p, 'rv') || 0), 0);
+  const d = fS - rS;
+  let rows = '';
+  arr.forEach(p => {
+    let meta = '<div class="m" style="font-weight:700">' + xEsc(displayName(p)) + '</div>';
+    if(p.kennzeichen) meta += '<div class="m">' + xEsc(p.kennzeichen) + '</div>';
+    if(p.gesellschaft) meta += '<div class="m">' + xEsc(p.gesellschaft) + '</div>';
+    if(p.vsnr) meta += '<div class="m">' + xEsc(p.vsnr) + '</div>';
+    if(p.ablauf) meta += '<div class="m">' + xEsc(fmtDate(p.ablauf)) + '</div>';
+    if(p.personen) meta += '<div class="m">' + xEsc(p.personen) + '</div>';
+    rows += '<tr><td>' + meta + '</td><td>' + vglZelleHtml(p, 'f') + '</td><td>' + vglZelleHtml(p, 'rv') + '</td></tr>';
+  });
+  drucke(
+    '<div class="bvkblatt">' +
+    '<h1>BEITRÄGE</h1>' +
+    (state.kunde ? '<div class="kd">' + xEsc(state.kunde) + '</div>' : '') +
+    '<div class="meta">Stand ' + todayStr() + ' · ' + arr.length + ' Verträge</div>' +
+    '<table><tr><th class="v">Vertrag</th><th class="b">' + xEsc(state.spalte || 'Anderer Versicherer') + '</th><th class="b">R+V</th></tr>' +
+    rows +
+    '<tr class="tot"><td>Gesamtsumme / Jahr</td><td>' + fmtNum(fS) + ' €</td><td>' + fmtNum(rS) + ' €</td></tr>' +
+    '<tr class="df"><td colspan="2">Differenz / Jahr (bisher − R+V)</td><td class="' + (d >= 0 ? 'gr' : 'rd') + '">' + (d < 0 ? '− ' : '') + fmtNum(Math.abs(d)) + ' €' + (d < 0 ? ' Mehrbeitrag' : '') + '</td></tr>' +
+    '</table></div>'
+  );
+};
+
+/* ---------- Sammel-Kündigung (aus jeder Ansicht) ---------- */
+function briefHtml(d){
+  const t = BVK.kuendigung.body(d);
+  let h = '<div class="bvkpage">';
+  h += '<p>' + xEsc(d.name) + '</p><p>' + xEsc(d.strasse) + '</p><p>' + xEsc(d.plzort) + '</p>';
+  h += '<div class="leer"></div><div class="leer"></div>';
+  h += '<p>' + xEsc(d.ges) + '</p>';
+  (d.adr ? d.adr.split(/\r?\n/).filter(x => x.trim()) : []).forEach(l => { h += '<p>' + xEsc(l) + '</p>'; });
+  if(d.fax){ h += '<div class="leer"></div><p>Fax-Nr: ' + xEsc(d.fax) + '</p>'; }
+  h += '<p class="re">' + xEsc(d.ort) + ', den ' + fmtDate(d.datum) + '</p>';
+  h += '<p class="bet">' + xEsc(BVK.kuendigung.subject(d)) + '</p>';
+  h += '<p>Sehr geehrte Damen und Herren,</p>';
+  h += '<p>' + xEsc(t.satz1) + '</p>';
+  h += '<p>' + xEsc(t.satz2) + '</p>';
+  h += '<p style="margin-top:14pt">Mit freundlichen Grüßen</p>';
+  h += '<p class="sig">_________________________</p>';
+  h += '<p>' + xEsc(d.name) + '</p>';
+  h += '</div>';
+  return h;
+}
+BVK.sammelDialog = function(opts){
+  opts = opts || {};
+  const doc = global.document;
+  const kid = opts.kundeId || BVK.aktivId();
+  const st = BVK.stateVon(kid);
+  if(!st) return;
+  if(!st.policies.length){ global.alert('Dieser Kunde hat noch keine Verträge.'); return; }
+  const ov = doc.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.52);z-index:999;display:flex;align-items:flex-start;justify-content:center;padding:4vh 14px;overflow:auto';
+  const card = doc.createElement('div');
+  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:13px;box-shadow:0 24px 60px rgba(10,20,40,.35);width:min(560px,100%);padding:16px 18px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif;margin-bottom:4vh';
+  const F = 'width:100%;box-sizing:border-box;border:1px solid #D9DEE7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#1a2333';
+  const L = 'display:block;font-size:10.5px;letter-spacing:.05em;color:#7a8294;margin:9px 0 3px';
+  card.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Sammel-Kündigung · ' + String(st.kunde || 'Unbenannter Kunde').replace(/</g,'&lt;') + '</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">✕</button></div>' +
+    '<div style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">ABSENDER</label><input data-f="name" style="' + F + '" placeholder="Vorname Nachname"></div>' +
+      '<div><label style="' + L + '">STRASSE</label><input data-f="strasse" style="' + F + '"></div>' +
+      '<div><label style="' + L + '">PLZ UND ORT</label><input data-f="plzort" style="' + F + '"></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">ORT</label><select data-f="ortwahl" style="' + F + '"><option value="Röthenbach">Röthenbach a. d. Pegnitz</option><option value="Schnaittach">Schnaittach</option><option value="__custom">Anderer …</option></select></div>' +
+      '<div data-ortrow style="display:none"><label style="' + L + '">ORT (MANUELL)</label><input data-f="ortcustom" style="' + F + '"></div>' +
+      '<div><label style="' + L + '">DATUM</label><input data-f="datum" type="date" style="' + F + '"></div>' +
+    '</div>' +
+    '<label style="' + L + '">VERTRÄGE</label>' +
+    '<div data-liste style="border:1px solid #ECEFF4;border-radius:9px;max-height:240px;overflow:auto"></div>' +
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#3a4356;margin-top:9px">' +
+      '<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input data-f="hilfsweise" type="checkbox" checked> hilfsweise-Klausel</label>' +
+      '<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input data-f="rueckwerbung" type="checkbox" checked> Rückwerbung untersagen</label>' +
+      '<label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input data-f="status" type="checkbox" checked> Status „Kündigung raus" setzen</label>' +
+    '</div>' +
+    '<div data-warn style="display:none;color:#B3372B;font-size:12px;margin-top:8px"></div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap">' +
+      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Abbrechen</button>' +
+      '<button data-druck style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Alle drucken</button>' +
+      '<button data-zip style="border:none;background:#274690;color:#fff;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">ZIP mit Word-Dateien</button>' +
+    '</div>' +
+    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Verträge ohne gefundene Anschrift sind abgewählt — Anschrift über ✉ am einzelnen Vertrag ergänzen und im Adressbuch merken.</div>';
+  const q = s => card.querySelector('[data-f="' + s + '"]');
+  q('name').value = (st.absender && st.absender.name) || '';
+  q('strasse').value = (st.absender && st.absender.strasse) || '';
+  q('plzort').value = (st.absender && st.absender.ort) || '';
+  const ow = st.kOrtWahl || 'Röthenbach';
+  if(ow === 'Röthenbach' || ow === 'Schnaittach') q('ortwahl').value = ow;
+  else { q('ortwahl').value = '__custom'; card.querySelector('[data-ortrow]').style.display = ''; q('ortcustom').value = ow; }
+  q('ortwahl').addEventListener('change', () => {
+    card.querySelector('[data-ortrow]').style.display = q('ortwahl').value === '__custom' ? '' : 'none';
+  });
+  q('datum').value = new Date().toISOString().slice(0, 10);
+  const zeilen = [];
+  const liste = card.querySelector('[data-liste]');
+  [...st.policies].sort((a, b) => (a.created || 0) - (b.created || 0)).forEach(p => {
+    const v = lookupVersicherer(p.gesellschaft || '');
+    const row = doc.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:9px;padding:7px 11px;border-bottom:1px solid #F0F2F5;font-size:12.5px;cursor:pointer';
+    const cb = doc.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!(v && p.gesellschaft);
+    const info = doc.createElement('span');
+    info.style.cssText = 'flex:1;min-width:0';
+    info.innerHTML = '<b>' + String(kuendBez(p) || sparteOf(p).full).replace(/</g,'&lt;') + '</b> · ' + String(p.gesellschaft || '—').replace(/</g,'&lt;') +
+      (p.vsnr ? ' <span style="font-family:ui-monospace,monospace;font-size:11px;color:#7a8294">' + String(p.vsnr).replace(/</g,'&lt;') + '</span>' : '') +
+      '<br><span style="font-size:11px;color:' + (v ? '#1c7a4d' : '#8a6410') + '">' + (v ? '✓ ' + standTxt(v) : '⚠ Anschrift nicht gefunden') + '</span>' +
+      (p.ablauf ? '<span style="font-size:11px;color:#7a8294"> · Termin ' + fmtDate(p.ablauf) + '</span>' : '');
+    row.append(cb, info);
+    liste.appendChild(row);
+    zeilen.push({ p: p, v: v, cb: cb });
+  });
+  function basisD(){
+    const ortWahl = q('ortwahl').value === '__custom' ? q('ortcustom').value.trim() : q('ortwahl').value;
+    return {
+      name: q('name').value.trim(), strasse: q('strasse').value.trim(), plzort: q('plzort').value.trim(),
+      ort: ortWahl || 'Röthenbach', ortWahl: ortWahl || 'Röthenbach',
+      datum: q('datum').value, hilfsweise: q('hilfsweise').checked, rueckwerbung: q('rueckwerbung').checked
+    };
+  }
+  function gewaehlt(){ return zeilen.filter(z => z.cb.checked); }
+  function warnung(txt){
+    const w = card.querySelector('[data-warn]');
+    w.textContent = txt;
+    w.style.display = 'block';
+  }
+  function pruefe(){
+    const b = basisD();
+    if(!b.name){ warnung('Bitte den Absendernamen ausfüllen.'); return null; }
+    const g = gewaehlt();
+    if(!g.length){ warnung('Bitte mindestens einen Vertrag anhaken.'); return null; }
+    return { b: b, g: g };
+  }
+  function dVon(z, b){
+    return Object.assign({}, b, {
+      bez: kuendBez(z.p), vsnr: z.p.vsnr || '', termin: z.p.ablauf || '',
+      ges: z.v ? z.v.n : (z.p.gesellschaft || ''), adr: z.v ? (z.v.a || '') : '', fax: z.v ? (z.v.f || '') : ''
+    });
+  }
+  function statusSetzen(g){
+    if(!q('status').checked) return;
+    const st2 = BVK.stateVon(kid);
+    if(!st2) return;
+    const b = basisD();
+    st2.absender = { name: b.name, strasse: b.strasse, ort: b.plzort };
+    st2.kOrtWahl = b.ortWahl;
+    g.forEach(z => {
+      const pp = st2.policies.find(x => x.id === z.p.id);
+      if(pp) pp.status = 'kuendigung';
+    });
+    BVK.speichern(kid, st2);
+  }
+  function zu(){ ov.remove(); doc.removeEventListener('keydown', escH); }
+  function escH(e){ if(e.key === 'Escape') zu(); }
+  doc.addEventListener('keydown', escH);
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  card.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', zu));
+  card.querySelector('[data-druck]').addEventListener('click', () => {
+    const ok = pruefe();
+    if(!ok) return;
+    statusSetzen(ok.g);
+    const html = ok.g.map(z => briefHtml(dVon(z, ok.b))).join('');
+    zu();
+    if(typeof opts.onDone === 'function'){ try{ opts.onDone(ok.g.length); }catch(e){} }
+    drucke(html);
+  });
+  card.querySelector('[data-zip]').addEventListener('click', async () => {
+    const ok = pruefe();
+    if(!ok) return;
+    if(typeof global.JSZip === 'undefined'){ warnung('Export fehlgeschlagen — Internetverbindung für JSZip nötig.'); return; }
+    const btn = card.querySelector('[data-zip]');
+    btn.textContent = 'Erstelle …';
+    btn.disabled = true;
+    try{
+      const z = new global.JSZip();
+      let i = 1;
+      for(const zeile of ok.g){
+        const d = dVon(zeile, ok.b);
+        const blob = await BVK.kuendigung.docxBlob(d);
+        const g = (d.ges || 'Versicherer').replace(/[^\wäöüÄÖÜß\- ]/g,'').trim().replace(/\s+/g,'_');
+        z.file('Kuendigung_' + (i++) + '_' + g + '.docx', blob);
+      }
+      const blob = await z.generateAsync({ type: 'blob' });
+      const k = (st.kunde || 'Kunde').replace(/[^\wäöüÄÖÜß\- ]/g,'').trim().replace(/\s+/g,'_');
+      downloadBlob(blob, 'Kuendigungen_' + k + '_' + new Date().toISOString().slice(0,10) + '.zip');
+      statusSetzen(ok.g);
+      zu();
+      if(typeof opts.onDone === 'function'){ try{ opts.onDone(ok.g.length); }catch(e){} }
+    }catch(e){
+      btn.textContent = 'ZIP mit Word-Dateien';
+      btn.disabled = false;
+      warnung('Export fehlgeschlagen — Internetverbindung für JSZip nötig.');
+    }
+  });
+  doc.body.appendChild(ov);
+  ov.appendChild(card);
+};
+
+/* ---------- Willkommens-Popup (erster Besuch oder nach 14 Tagen Pause) ---------- */
+function willkommenVielleicht(){
+  if(!store) return;
+  let ansicht = null, letzte = 0, gezeigt = 0;
+  try{
+    ansicht = store.getItem('bv_ansicht');
+    letzte = parseInt(store.getItem('bv_letzte_nutzung') || '0', 10) || 0;
+    gezeigt = parseInt(store.getItem('bv_willkommen_ts') || '0', 10) || 0;
+  }catch(e){}
+  const jetzt = Date.now();
+  try{ store.setItem('bv_letzte_nutzung', String(jetzt)); }catch(e){}
+  if(ansicht === 'uebersicht') return;
+  if(gezeigt && (!letzte || jetzt - letzte <= 14 * 864e5)) return;
+  const doc = global.document;
+  const ov = doc.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.55);z-index:998;display:flex;align-items:flex-start;justify-content:center;padding:7vh 14px;overflow:auto';
+  const card = doc.createElement('div');
+  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:15px;box-shadow:0 24px 60px rgba(10,20,40,.4);width:min(560px,100%);padding:20px 22px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif;margin-bottom:6vh';
+  function merken(){ try{ store.setItem('bv_willkommen_ts', String(Date.now())); }catch(e){} }
+  function zu(){ merken(); ov.remove(); }
+  const titel = gezeigt ? 'Willkommen zurück!' : 'Willkommen im Bestandsvergleich!';
+  card.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">' + titel + '</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">✕</button></div>' +
+    '<div style="font-size:13px;color:#5a6478;margin:4px 0 14px">Womit möchtest du arbeiten? Kunden und Verträge sind in jeder Ansicht dieselben — du kannst jederzeit wechseln.</div>' +
+    '<div data-karten style="display:grid;grid-template-columns:1fr 1fr;gap:9px"></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">' +
+      '<a data-alle href="ansichten.html" style="font-size:12.5px;color:#274690;text-decoration:none;font-weight:600">Alle Ansichten mit Vorschau →</a>' +
+      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:7px 15px;font-size:12.5px;cursor:pointer;font-family:inherit;color:#5a6478">Später</button>' +
+    '</div>';
+  const wrap = card.querySelector('[data-karten]');
+  BVK.ANSICHTEN.filter(a => a.id !== 'uebersicht').forEach(a => {
+    const k = doc.createElement('button');
+    k.style.cssText = 'text-align:left;border:1.5px solid ' + (a.beta ? '#E3E6EB' : '#274690') + ';background:#fff;border-radius:11px;padding:10px 12px;cursor:pointer;font-family:inherit;color:#1a2333';
+    k.innerHTML =
+      '<span style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600">' + a.name +
+      (a.beta ? '<span style="font-size:9px;font-weight:700;background:#EEF0F4;color:#8a93a5;border-radius:99px;padding:1px 7px">BETA</span>'
+              : '<span style="font-size:9px;font-weight:700;background:#E4EDFB;color:#274690;border-radius:99px;padding:1px 7px">EMPFOHLEN</span>') +
+      '</span>' +
+      '<span style="display:block;font-size:11px;color:#7a8294;margin-top:3px">' + (a.desc || '') + '</span>';
+    k.addEventListener('click', () => {
+      merken();
+      try{ store.setItem('bv_ansicht', a.id); }catch(e){}
+      if(a.id === ansicht){ ov.remove(); return; }
+      global.location.href = a.url;
+    });
+    wrap.appendChild(k);
+  });
+  card.querySelector('[data-alle]').addEventListener('click', merken);
+  card.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', zu));
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  doc.body.appendChild(ov);
+  ov.appendChild(card);
+}
+
 /* ---------- Version, Badge und Speicher-Warnung ---------- */
 BVK.VERSION = '2.1';
 function uiEinhaengen(){
@@ -1066,6 +1392,7 @@ function uiEinhaengen(){
     doc.body.appendChild(st);
     doc.body.appendChild(a);
   }
+  try{ willkommenVielleicht(); }catch(e){}
   if(!store && !doc.getElementById('bvkWarn')){
     const w = doc.createElement('div');
     w.id = 'bvkWarn';

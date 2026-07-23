@@ -70,29 +70,7 @@ button{font-family:inherit;cursor:pointer}
 #kernfehlt{display:none;margin:12px 0;background:#FBE9E7;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#23262B;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
 #toast.show{opacity:1}
-#printwrap{display:none}
 @media (max-width:860px){.grid{grid-template-columns:1fr}.brow{grid-template-columns:46px 1.3fr 150px 64px}.brow .babl{display:none}}
-@media print{
-  #app,#toast,#bvkVer,#bvkWarn{display:none !important}
-  body{background:#fff}
-  #printwrap{display:block}
-  #printwrap .blatt{width:100%;color:#111;font-size:11px;line-height:1.45;font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
-  #printwrap h1{margin:0;font-size:17px;letter-spacing:.12em}
-  #printwrap .kd{font-size:12.5px;font-weight:700;margin-top:2px}
-  #printwrap .meta{font-size:9.5px;color:#5B6B80;margin-bottom:9px}
-  #printwrap table{width:100%;border-collapse:collapse;font-size:9.5px}
-  #printwrap td,#printwrap th{border:.75pt solid #7A8BA0;padding:4px 6px;vertical-align:top;text-align:left}
-  #printwrap th.v{background:#EDF2F9;color:#42536B;width:28%}
-  #printwrap th.b{background:#0E4DA4;color:#fff}
-  #printwrap .m{font-style:italic}
-  #printwrap .pr{font-weight:700}
-  #printwrap .an{color:#42536B;font-size:8.5px}
-  #printwrap .tot td{background:#EDF2F9;font-weight:700}
-  #printwrap .df td{font-weight:700}
-  #printwrap .df .gr{color:#177245}
-  #printwrap .df .rd{color:#A62B22}
-  @page{size:A4;margin:13mm}
-}
 </style>
 </head>
 <body>
@@ -111,6 +89,7 @@ button{font-family:inherit;cursor:pointer}
     <button class="btn ak" id="btnVertrag">+ Vertrag</button>
     <button class="btn" id="btnWord">Word-Vergleich</button>
     <button class="btn" id="btnPrint">Drucken / PDF</button>
+    <button class="btn" id="btnSammel">Sammel-Kündigung</button>
     <span class="sep"></span>
     <button class="btn" id="btnKundeNeu">+ Neuer Kunde</button>
   </div>
@@ -157,7 +136,6 @@ button{font-family:inherit;cursor:pointer}
 </div>
 </div>
 
-<div id="printwrap"><div class="blatt" id="printBlatt"></div></div>
 <div id="toast" role="status"></div>
 
 <script>
@@ -283,48 +261,6 @@ function render(){
   renderBestand(st);
 }
 
-/* ---------- Drucken / PDF (gleiches Blatt wie im Dokument-Studio) ---------- */
-function pZelle(p, side){
-  const leist = side === 'rv' ? p.leistRV : p.leistF;
-  const b = side === 'rv' ? BVK.rvEffective(p) : p.beitragF;
-  const z = side === 'rv' ? p.zwRV : p.zwF;
-  const alt = side !== 'rv' ? BVK.beitragsAlt(p) : null;
-  let h = '';
-  if(leist) h += leist.split(/\r?\n/).filter(x => x.trim()).map(l => '<div>' + esc(l) + '</div>').join('');
-  if(b != null){
-    h += '<div class="pr">' + BVK.fmtNum(b) + ' € ' + BVK.ZW[z].l + (alt ? ' <span class="an">(Stand ' + alt + ')</span>' : '') + '</div>';
-    if(z !== 'jaehrlich') h += '<div class="an">≙ ' + BVK.fmtNum(b * BVK.ZW[z].f) + ' € / Jahr</div>';
-  } else if(side === 'rv'){
-    h += '<div class="pr">0,00 €</div>';
-  }
-  return h;
-}
-function renderPrint(st){
-  const arr = [...st.policies].sort((a, b) => (a.created || 0) - (b.created || 0));
-  const fS = arr.reduce((s, p) => s + (BVK.annual(p, 'f') || 0), 0);
-  const rS = arr.reduce((s, p) => s + (BVK.annual(p, 'rv') || 0), 0);
-  const d = fS - rS;
-  let rows = '';
-  arr.forEach(p => {
-    let meta = '<div class="m" style="font-weight:700">' + esc(BVK.displayName(p)) + '</div>';
-    if(p.kennzeichen) meta += '<div class="m">' + esc(p.kennzeichen) + '</div>';
-    if(p.gesellschaft) meta += '<div class="m">' + esc(p.gesellschaft) + '</div>';
-    if(p.vsnr) meta += '<div class="m">' + esc(p.vsnr) + '</div>';
-    if(p.ablauf) meta += '<div class="m">' + esc(BVK.fmtDate(p.ablauf)) + '</div>';
-    if(p.personen) meta += '<div class="m">' + esc(p.personen) + '</div>';
-    rows += '<tr><td>' + meta + '</td><td>' + pZelle(p, 'f') + '</td><td>' + pZelle(p, 'rv') + '</td></tr>';
-  });
-  $('printBlatt').innerHTML =
-    '<h1>BEITRÄGE</h1>' +
-    (st.kunde ? '<div class="kd">' + esc(st.kunde) + '</div>' : '') +
-    '<div class="meta">Stand ' + BVK.todayStr() + ' · ' + arr.length + ' Verträge</div>' +
-    '<table><tr><th class="v">Vertrag</th><th class="b">' + esc(st.spalte || 'Anderer Versicherer') + '</th><th class="b">R+V</th></tr>' +
-    rows +
-    '<tr class="tot"><td>Gesamtsumme / Jahr</td><td>' + BVK.fmtNum(fS) + ' €</td><td>' + BVK.fmtNum(rS) + ' €</td></tr>' +
-    '<tr class="df"><td colspan="2">Differenz / Jahr (bisher − R+V)</td><td class="' + (d >= 0 ? 'gr' : 'rd') + '">' + (d < 0 ? '− ' : '') + BVK.fmtNum(Math.abs(d)) + ' €' + (d < 0 ? ' Mehrbeitrag' : '') + '</td></tr>' +
-    '</table>';
-}
-
 /* ---------- Aktionen ---------- */
 $('kundeSel').addEventListener('change', e => {
   if(!hatKern) return;
@@ -348,8 +284,11 @@ $('btnPrint').addEventListener('click', () => {
   if(!hatKern) return;
   const st = BVK.ensureStateShape(BVK.aktiverState());
   if(!st.policies.length){ toast('Der aktive Kunde hat noch keine Verträge.'); return; }
-  renderPrint(st);
-  window.print();
+  BVK.druckeVergleich(st);
+});
+$('btnSammel').addEventListener('click', () => {
+  if(!hatKern) return;
+  BVK.sammelDialog({ onDone: n => { render(); toast(n + ' Kündigung' + (n === 1 ? '' : 'en') + ' erstellt.'); } });
 });
 $('btnKundeNeu').addEventListener('click', () => {
   if(!hatKern) return;
