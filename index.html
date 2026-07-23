@@ -460,20 +460,14 @@ html[data-anim="voll"] .btn:active{transform:scale(.97)}
 </style>
 <script>
 try{
-  var __d = null;
-  try{ __d = JSON.parse(localStorage.getItem('bv_design_v1') || 'null'); }catch(e){}
-  if(!__d){
-    var __t = localStorage.getItem('bv_theme');
-    if(__t) __d = { farbe: __t };
-    else if(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) __d = { farbe: 'dunkel' };
-  }
-  if(__d){
-    var __el = document.documentElement;
-    ['farbe','material','typo','form','dichte','anim'].forEach(function(k){ if(__d[k]) __el.dataset[k] = __d[k]; });
-    var __g = (typeof __d.glas === 'number') ? __d.glas : 60;
-    __el.style.setProperty('--glasA', (96 - 0.7 * __g).toFixed(0) + '%');
-    __el.style.setProperty('--glasBlur', (2 + 0.3 * __g).toFixed(0) + 'px');
-  }
+  var P={klassik:['klassik','flach','plex','standard','standard','dezent'],papier:['papier','flach','plex','standard','standard','dezent'],dunkel:['dunkel','flach','plex','standard','standard','dezent'],graphit:['graphit','flach','plex','standard','standard','dezent'],polar:['polar','glas','system','rund','standard','dezent'],mitternacht:['mitternacht','glas','system','rund','standard','dezent'],kontor:['kontor','brutal','grotesk','eckig','standard','dezent'],journal:['journal','flach','serif','standard','luftig','dezent'],cockpit:['cockpit','flach','plex','standard','kompakt','dezent'],studio:['studio','clay','rund','pille','luftig','dezent'],puls:['puls','flach','archivo','standard','standard','voll']};
+  var n=null;
+  try{ n=localStorage.getItem('bv_design_v2'); }catch(e){}
+  if(!n){ try{ var o=JSON.parse(localStorage.getItem('bv_design_v1')||'null'); if(o&&o.farbe&&P[o.farbe]) n=o.farbe; }catch(e){} }
+  if(!n){ try{ var t=localStorage.getItem('bv_theme'); if(t&&P[t]) n=t; }catch(e){} }
+  if(!n&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches) n='dunkel';
+  var p=P[n||'klassik']||P.klassik, el=document.documentElement, K=['farbe','material','typo','form','dichte','anim'];
+  for(var i=0;i<K.length;i++) el.dataset[K[i]]=p[i];
 }catch(e){}
 </script>
 </head>
@@ -744,82 +738,21 @@ try{
       <button class="btn ghost" id="studioClose">Schließen</button>
     </div>
     <div class="k-body">
-      <div class="k-sec">Schnellstart (Presets)</div>
+      <div class="k-sec">Design wählen</div>
       <div class="preset-grid">
-        <button data-preset="klassik"><span class="dots"><i style="background:#F2F4F8"></i><i style="background:#0E4DA4"></i><i style="background:#0B2F5E"></i></span>Klassik</button>
-        <button data-preset="polar"><span class="dots"><i style="background:#E7EEF8"></i><i style="background:#9CC4F5"></i><i style="background:#12325E"></i></span>Polar Glas</button>
-        <button data-preset="mitternacht"><span class="dots"><i style="background:#0B1322"></i><i style="background:#6AA5FF"></i><i style="background:#152A4C"></i></span>Mitternacht Glas</button>
-        <button data-preset="kontor"><span class="dots"><i style="background:#F1ECDF"></i><i style="background:#FFD23F"></i><i style="background:#101318"></i></span>Kontor</button>
-        <button data-preset="journal"><span class="dots"><i style="background:#FBFAF6"></i><i style="background:#1E4D3B"></i><i style="background:#1A1C1A"></i></span>Journal</button>
-        <button data-preset="cockpit"><span class="dots"><i style="background:#0F1114"></i><i style="background:#24D67C"></i><i style="background:#24282E"></i></span>Cockpit</button>
-        <button data-preset="studio"><span class="dots"><i style="background:#F6F1EA"></i><i style="background:#6A5BBF"></i><i style="background:#DFF3E6"></i></span>Studio</button>
-        <button data-preset="puls"><span class="dots"><i style="background:#FAFAF8"></i><i style="background:#2E5CFF"></i><i style="background:#141414"></i></span>Puls</button>
+        <button data-design="klassik"><span class="dots"><i style="background:#F2F4F8"></i><i style="background:#0E4DA4"></i><i style="background:#0B2F5E"></i></span>Klassik</button>
+        <button data-design="papier"><span class="dots"><i style="background:#F1ECE1"></i><i style="background:#1E6B50"></i><i style="background:#23372E"></i></span>Papier</button>
+        <button data-design="dunkel"><span class="dots"><i style="background:#0E1520"></i><i style="background:#6AA5FF"></i><i style="background:#1A2C4A"></i></span>Dunkel</button>
+        <button data-design="graphit"><span class="dots"><i style="background:#131313"></i><i style="background:#E2953F"></i><i style="background:#232325"></i></span>Graphit</button>
+        <button data-design="polar"><span class="dots"><i style="background:#E7EEF8"></i><i style="background:#9CC4F5"></i><i style="background:#12325E"></i></span>Polar Glas</button>
+        <button data-design="mitternacht"><span class="dots"><i style="background:#0B1322"></i><i style="background:#6AA5FF"></i><i style="background:#152A4C"></i></span>Mitternacht Glas</button>
+        <button data-design="kontor"><span class="dots"><i style="background:#F1ECDF"></i><i style="background:#FFD23F"></i><i style="background:#101318"></i></span>Kontor</button>
+        <button data-design="journal"><span class="dots"><i style="background:#FBFAF6"></i><i style="background:#1E4D3B"></i><i style="background:#1A1C1A"></i></span>Journal</button>
+        <button data-design="cockpit"><span class="dots"><i style="background:#0F1114"></i><i style="background:#24D67C"></i><i style="background:#24282E"></i></span>Cockpit</button>
+        <button data-design="studio"><span class="dots"><i style="background:#F6F1EA"></i><i style="background:#6A5BBF"></i><i style="background:#DFF3E6"></i></span>Studio</button>
+        <button data-design="puls"><span class="dots"><i style="background:#FAFAF8"></i><i style="background:#2E5CFF"></i><i style="background:#141414"></i></span>Puls</button>
       </div>
-
-      <div class="k-sec">Farbwelt</div>
-      <div class="seg">
-        <button data-axis="farbe" data-val="klassik">Klassik</button>
-        <button data-axis="farbe" data-val="papier">Papier</button>
-        <button data-axis="farbe" data-val="polar">Polar</button>
-        <button data-axis="farbe" data-val="journal">Journal</button>
-        <button data-axis="farbe" data-val="studio">Studio</button>
-        <button data-axis="farbe" data-val="puls">Puls</button>
-        <button data-axis="farbe" data-val="kontor">Kontor</button>
-        <button data-axis="farbe" data-val="dunkel">Dunkel</button>
-        <button data-axis="farbe" data-val="mitternacht">Mitternacht</button>
-        <button data-axis="farbe" data-val="graphit">Graphit</button>
-        <button data-axis="farbe" data-val="cockpit">Cockpit</button>
-      </div>
-
-      <div class="k-sec">Material</div>
-      <div class="seg">
-        <button data-axis="material" data-val="flach">Flach</button>
-        <button data-axis="material" data-val="glas">Liquid Glass</button>
-        <button data-axis="material" data-val="brutal">Kontur (Brutal)</button>
-        <button data-axis="material" data-val="clay">Weich (Clay)</button>
-      </div>
-      <div class="glas-row" id="glasRow" style="display:none">
-        <label for="glasInt" style="font-size:12.5px;color:var(--muted);font-weight:600">Glas-Intensität</label>
-        <input type="range" id="glasInt" min="0" max="100" step="1" value="60">
-        <span id="glasOut" style="font-family:var(--mono);font-size:13px;min-width:44px">60 %</span>
-      </div>
-
-      <div class="k-sec">Typografie</div>
-      <div class="seg">
-        <button data-axis="typo" data-val="plex">IBM Plex</button>
-        <button data-axis="typo" data-val="system">System (SF)</button>
-        <button data-axis="typo" data-val="grotesk">Grotesk</button>
-        <button data-axis="typo" data-val="serif">Serif (Journal)</button>
-        <button data-axis="typo" data-val="rund">Rund</button>
-        <button data-axis="typo" data-val="archivo">Archivo</button>
-      </div>
-
-      <div class="k-sec">Formen</div>
-      <div class="seg">
-        <button data-axis="form" data-val="eckig">Eckig</button>
-        <button data-axis="form" data-val="standard">Standard</button>
-        <button data-axis="form" data-val="rund">Rund</button>
-        <button data-axis="form" data-val="pille">Pille</button>
-      </div>
-
-      <div class="k-sec">Dichte</div>
-      <div class="seg">
-        <button data-axis="dichte" data-val="kompakt">Kompakt</button>
-        <button data-axis="dichte" data-val="standard">Standard</button>
-        <button data-axis="dichte" data-val="luftig">Luftig</button>
-      </div>
-
-      <div class="k-sec">Animationen</div>
-      <div class="seg">
-        <button data-axis="anim" data-val="aus">Aus</button>
-        <button data-axis="anim" data-val="dezent">Dezent</button>
-        <button data-axis="anim" data-val="voll">Voll (Zähler und Effekte)</button>
-      </div>
-
-      <div class="k-actions" style="margin-top:18px">
-        <button class="btn" data-dreset="1">Auf Klassik zurücksetzen</button>
-      </div>
-      <div class="k-note">Jeder Baustein wirkt sofort und lässt sich frei mit allen anderen kombinieren. Word, PDF und Kündigungsschreiben bleiben davon unberührt und immer neutral druckbar.</div>
+      <div class="k-note">Jedes Design ist ein eigener, komplett abgestimmter Look — Farben, Material, Schrift, Formen, Dichte und Animationen inklusive. Die Wahl wird automatisch gespeichert. Word, PDF und Kündigungsschreiben bleiben immer neutral druckbar.</div>
     </div>
   </div>
 </div>
@@ -2088,14 +2021,9 @@ $('btnDesign').addEventListener('click', () => { syncStudio(); $('studioOverlay'
 $('studioClose').addEventListener('click', () => $('studioOverlay').classList.remove('open'));
 $('studioOverlay').addEventListener('click', e => {
   if(e.target.id === 'studioOverlay'){ $('studioOverlay').classList.remove('open'); return; }
-  const b = e.target.closest('[data-axis],[data-preset],[data-dreset]');
-  if(!b) return;
-  if(b.dataset.dreset){ design = Object.assign({}, DESIGN_DEFAULT); applyDesign(); toast('Design zurückgesetzt.'); return; }
-  if(b.dataset.preset){ design = Object.assign({}, design, DESIGN_PRESETS[b.dataset.preset]); applyDesign(); return; }
-  design[b.dataset.axis] = b.dataset.val;
-  applyDesign();
+  const b = e.target.closest('[data-design]');
+  if(b) applyDesign(b.dataset.design);
 });
-$('glasInt').addEventListener('input', e => { design.glas = +e.target.value; applyDesign(); });
 document.addEventListener('keydown', e => {
   if(e.key==='Escape'){ ['overlay','kOverlay','abOverlay','sammelOverlay','studioOverlay'].forEach(id => $(id).classList.remove('open')); }
 });
@@ -2111,67 +2039,44 @@ function refreshGesListen(){
   });
 }
 
-/* ---------- Design-Studio (Baukasten) ---------- */
-const DESIGN_DEFAULT = { farbe:'klassik', material:'flach', typo:'plex', form:'standard', dichte:'standard', anim:'dezent', glas:60 };
-const DESIGN_AXES = {
-  farbe: ['klassik','papier','polar','journal','studio','puls','kontor','dunkel','mitternacht','graphit','cockpit'],
-  material: ['flach','glas','brutal','clay'],
-  typo: ['plex','system','grotesk','serif','rund','archivo'],
-  form: ['eckig','standard','rund','pille'],
-  dichte: ['kompakt','standard','luftig'],
-  anim: ['aus','dezent','voll']
+/* ---------- Designs (11 eigenständige Looks) ---------- */
+const DESIGNS = {
+  klassik:     {farbe:'klassik',     material:'flach',  typo:'plex',    form:'standard', dichte:'standard', anim:'dezent'},
+  papier:      {farbe:'papier',      material:'flach',  typo:'plex',    form:'standard', dichte:'standard', anim:'dezent'},
+  dunkel:      {farbe:'dunkel',      material:'flach',  typo:'plex',    form:'standard', dichte:'standard', anim:'dezent'},
+  graphit:     {farbe:'graphit',     material:'flach',  typo:'plex',    form:'standard', dichte:'standard', anim:'dezent'},
+  polar:       {farbe:'polar',       material:'glas',   typo:'system',  form:'rund',     dichte:'standard', anim:'dezent'},
+  mitternacht: {farbe:'mitternacht', material:'glas',   typo:'system',  form:'rund',     dichte:'standard', anim:'dezent'},
+  kontor:      {farbe:'kontor',      material:'brutal', typo:'grotesk', form:'eckig',    dichte:'standard', anim:'dezent'},
+  journal:     {farbe:'journal',     material:'flach',  typo:'serif',   form:'standard', dichte:'luftig',   anim:'dezent'},
+  cockpit:     {farbe:'cockpit',     material:'flach',  typo:'plex',    form:'standard', dichte:'kompakt',  anim:'dezent'},
+  studio:      {farbe:'studio',      material:'clay',   typo:'rund',    form:'pille',    dichte:'luftig',   anim:'dezent'},
+  puls:        {farbe:'puls',        material:'flach',  typo:'archivo', form:'standard', dichte:'standard', anim:'voll'}
 };
-const DESIGN_PRESETS = {
-  klassik:{farbe:'klassik',material:'flach',typo:'plex',form:'standard',dichte:'standard',anim:'dezent'},
-  polar:{farbe:'polar',material:'glas',typo:'system',form:'rund',dichte:'standard',anim:'dezent'},
-  mitternacht:{farbe:'mitternacht',material:'glas',typo:'system',form:'rund',dichte:'standard',anim:'dezent'},
-  kontor:{farbe:'kontor',material:'brutal',typo:'grotesk',form:'eckig',dichte:'standard',anim:'dezent'},
-  journal:{farbe:'journal',material:'flach',typo:'serif',form:'standard',dichte:'luftig',anim:'dezent'},
-  cockpit:{farbe:'cockpit',material:'flach',typo:'plex',form:'standard',dichte:'kompakt',anim:'dezent'},
-  studio:{farbe:'studio',material:'clay',typo:'rund',form:'pille',dichte:'luftig',anim:'dezent'},
-  puls:{farbe:'puls',material:'flach',typo:'archivo',form:'standard',dichte:'standard',anim:'voll'}
-};
-let design = Object.assign({}, DESIGN_DEFAULT);
-function applyDesign(){
+let designName = 'klassik';
+function applyDesign(name){
+  if(!DESIGNS[name]) name = 'klassik';
+  designName = name;
+  const p = DESIGNS[name];
   const el = document.documentElement;
-  ['farbe','material','typo','form','dichte','anim'].forEach(k => {
-    if(DESIGN_AXES[k].includes(design[k])) el.dataset[k] = design[k];
-    else { design[k] = DESIGN_DEFAULT[k]; el.dataset[k] = design[k]; }
-  });
-  const g = Math.max(0, Math.min(100, +design.glas || 0));
-  design.glas = g;
-  el.style.setProperty('--glasA', (96 - 0.7 * g).toFixed(0) + '%');
-  el.style.setProperty('--glasBlur', (2 + 0.3 * g).toFixed(0) + 'px');
-  if(store){ try{ store.setItem('bv_design_v1', JSON.stringify(design)); }catch(e){} }
+  ['farbe','material','typo','form','dichte','anim'].forEach(k => { el.dataset[k] = p[k]; });
+  if(store){ try{ store.setItem('bv_design_v2', name); }catch(e){} }
   syncStudio();
 }
 function syncStudio(){
-  document.querySelectorAll('#studioOverlay [data-axis]').forEach(b => {
-    b.classList.toggle('on', design[b.dataset.axis] === b.dataset.val);
+  document.querySelectorAll('#studioOverlay [data-design]').forEach(b => {
+    b.classList.toggle('on', b.dataset.design === designName);
   });
-  document.querySelectorAll('#studioOverlay [data-preset]').forEach(b => {
-    const p = DESIGN_PRESETS[b.dataset.preset];
-    b.classList.toggle('on', !!p && ['farbe','material','typo','form','dichte','anim'].every(k => design[k] === p[k]));
-  });
-  const gi = $('glasInt');
-  if(gi){ gi.value = design.glas; $('glasOut').textContent = design.glas + ' %'; }
-  const gr = $('glasRow');
-  if(gr) gr.style.display = design.material === 'glas' ? '' : 'none';
 }
 function initDesign(){
-  let d = null;
+  let n = null;
   if(store){
-    try{ d = JSON.parse(store.getItem('bv_design_v1') || 'null'); }catch(e){}
-    if(!d){
-      try{
-        const t = store.getItem('bv_theme');
-        if(t && DESIGN_AXES.farbe.includes(t)) d = { farbe: t };
-      }catch(e){}
-    }
+    try{ n = store.getItem('bv_design_v2'); }catch(e){}
+    if(!n){ try{ const o = JSON.parse(store.getItem('bv_design_v1') || 'null'); if(o && o.farbe && DESIGNS[o.farbe]) n = o.farbe; }catch(e){} }
+    if(!n){ try{ const t = store.getItem('bv_theme'); if(t && DESIGNS[t]) n = t; }catch(e){} }
   }
-  if(!d && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) d = { farbe: 'dunkel' };
-  design = Object.assign({}, DESIGN_DEFAULT, d || {});
-  applyDesign();
+  if(!n && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) n = 'dunkel';
+  applyDesign(n || 'klassik');
 }
 function animMoney(el, txt){
   const m = /^([−+])?\s?([\d.,]+) €$/.exec(txt);
