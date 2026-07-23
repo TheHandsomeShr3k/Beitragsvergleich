@@ -116,7 +116,16 @@ function toast(m){
   clearTimeout(toast._h);
   toast._h = setTimeout(() => t.classList.remove('show'), 2200);
 }
-function speichern(){ if(hatKern) BVK.speichern(BVK.aktivId(), state); }
+let saveT = null;
+function speichernJetzt(){
+  clearTimeout(saveT);
+  saveT = null;
+  if(hatKern) BVK.speichern(BVK.aktivId(), state);
+}
+function speichern(){
+  clearTimeout(saveT);
+  saveT = setTimeout(speichernJetzt, 250);
+}
 function sortiert(){ return [...state.policies].sort((a, b) => (a.created || 0) - (b.created || 0)); }
 function sel(){ return state.policies.find(p => p.id === selId) || null; }
 
@@ -302,9 +311,10 @@ $('btnWord').addEventListener('click', async () => {
   try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
   catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
 });
-if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'dokument', speichern);
+if(hatKern) BVK.ansichtMenu($('ansichtSel'), 'dokument', speichernJetzt);
 function resync(){
   if(!hatKern) return;
+  if(saveT) speichernJetzt();
   BVK.reload();
   const fresh = BVK.ensureStateShape(BVK.aktiverState());
   if(JSON.stringify(fresh) !== JSON.stringify(state)){
@@ -317,7 +327,7 @@ window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key =
 window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
 window.addEventListener('focus', resync);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
-window.addEventListener('beforeunload', speichern);
+window.addEventListener('beforeunload', speichernJetzt);
 
 if(hatKern){
   const dl = $('gesListe');

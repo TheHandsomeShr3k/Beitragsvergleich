@@ -60,6 +60,7 @@ button{font-family:inherit;cursor:pointer}
   <div class="kliste" id="kListe"></div>
   <div class="werk">
     <button class="btn" id="btnDubl">Duplikate bereinigen</button>
+    <button class="btn" id="btnBackup">Alles sichern (JSON)</button>
     <span class="hint">Erkennt Kunden mit identischem Namen und identischen Verträgen und behält jeweils die neueste Version. Löschen ist endgültig — Verträge des Kunden gehen mit.</span>
   </div>
 </div>
@@ -180,6 +181,23 @@ function renderKunden(){
     w.appendChild(row);
   });
 }
+$('btnBackup').addEventListener('click', () => {
+  if(!hatKern) return;
+  const daten = {
+    art: 'bestandsvergleich_gesamtsicherung',
+    stand: new Date().toISOString(),
+    kunden: BVK.liste().map(k => ({ name: k.name, state: BVK.stateVon(k.id) })),
+    adressbuch: BVK.adressbuch()
+  };
+  const blob = new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' });
+  const aEl = document.createElement('a');
+  aEl.href = URL.createObjectURL(blob);
+  aEl.download = 'Bestandsvergleich_Gesamtsicherung_' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(aEl);
+  aEl.click();
+  setTimeout(() => { URL.revokeObjectURL(aEl.href); aEl.remove(); }, 800);
+  toast(daten.kunden.length + ' Kunden gesichert.');
+});
 $('btnDubl').addEventListener('click', () => {
   if(!hatKern) return;
   const n = BVK.bereinigeDubletten();

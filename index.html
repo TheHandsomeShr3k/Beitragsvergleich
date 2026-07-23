@@ -951,12 +951,20 @@ const store = (() => {
   } catch(e){ return null; }
 })();
 const STORE_KEY = 'bestandsvergleich_v1';
-function autosave(){
+let autosaveT = null;
+function autosaveJetzt(){
+  clearTimeout(autosaveT);
+  autosaveT = null;
   if(window.BVK){
     try{ BVK.speichern(BVK.aktivId(), state); refreshKundeSel(); return; }catch(e){}
   }
   if(store){ try{ store.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 }
+function autosave(){
+  clearTimeout(autosaveT);
+  autosaveT = setTimeout(autosaveJetzt, 250);
+}
+window.addEventListener('beforeunload', autosaveJetzt);
 function restore(){
   if(window.BVK){
     try{
@@ -1099,9 +1107,14 @@ function displayName(p){
 }
 function fristDate(p){
   if(!p.ablauf) return null;
+  if(window.BVK) return BVK.fristDate(p);
   const d = new Date(p.ablauf + 'T00:00:00');
   if(isNaN(d)) return null;
+  const tag = d.getDate();
+  d.setDate(1);
   d.setMonth(d.getMonth() - (p.sparte==='kfz' ? 1 : 3));
+  const maxTag = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(tag, maxTag));
   return d;
 }
 function monthsLeft(iso){
@@ -1925,6 +1938,9 @@ function importJson(file){
       state = { kunde: s.kunde || '', spalte: s.spalte || 'Anderer Versicherer', policies: s.policies,
         absender: s.absender || {name:'',strasse:'',ort:''}, kOrtWahl: s.kOrtWahl || 'Röthenbach' };
       state.policies.forEach(p => { if(p.gesellschaft) p.gesellschaft = shortenGesName(p.gesellschaft); });
+      if(window.BVK){
+        try{ BVK.neu(''); kundeSig = ''; }catch(e){}
+      }
       if(s.adressbuch && typeof s.adressbuch === 'object'){
         for(const k in s.adressbuch){
           const e = s.adressbuch[k];
@@ -2190,6 +2206,7 @@ $('kundeSel').addEventListener('change', e => wechsleKunde(e.target.value));
 function kernResync(){
   if(!window.BVK) return;
   try{
+    if(autosaveT) autosaveJetzt();
     BVK.reload();
     const fresh = ensureStateShape(BVK.aktiverState());
     fresh.policies.forEach(p => { if(p.gesellschaft) p.gesellschaft = shortenGesName(p.gesellschaft); });

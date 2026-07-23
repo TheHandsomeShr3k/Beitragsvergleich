@@ -71,7 +71,7 @@ function sichere(){
 }
 function nameVon(k){ return (k.state.kunde || '').trim() || 'Unbenannter Kunde'; }
 
-BVK.reload = () => { mem = null; };
+BVK.reload = () => { mem = null; abCache = null; };
 BVK.liste = () => ladeAlles().kunden
   .map(k => ({ id: k.id, name: nameVon(k), anzahl: k.state.policies.length, geaendert: k.geaendert }));
 BVK.aktivId = () => ladeAlles().aktivId;
@@ -112,9 +112,12 @@ BVK.loeschen = id => {
   sichere();
   return true;
 };
+let abCache = null;
 BVK.adressbuch = () => {
-  if(store){ try{ const o = JSON.parse(store.getItem(K_AB) || '{}'); if(o && typeof o === 'object') return o; }catch(e){} }
-  return {};
+  if(abCache) return abCache;
+  if(store){ try{ const o = JSON.parse(store.getItem(K_AB) || '{}'); if(o && typeof o === 'object'){ abCache = o; return o; } }catch(e){} }
+  abCache = {};
+  return abCache;
 };
 BVK.leererState = leererState;
 BVK.ensureStateShape = ensureStateShape;
@@ -177,7 +180,11 @@ function fristDate(p){
   if(!p.ablauf) return null;
   const d = new Date(p.ablauf + 'T00:00:00');
   if(isNaN(d)) return null;
+  const tag = d.getDate();
+  d.setDate(1);
   d.setMonth(d.getMonth() - (p.sparte === 'kfz' ? 1 : 3));
+  const maxTag = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(tag, maxTag));
   return d;
 }
 function kuendBez(p){
