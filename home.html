@@ -46,6 +46,12 @@ button{font-family:inherit;cursor:pointer}
 .pill.amber{background:#FBF2DC;color:var(--amber)}
 .pill.gr{background:#EDF1EA;color:#4C6B52}
 .fleer{color:var(--mut);font-size:12.5px;padding:8px 0}
+.t-add{grid-column:1/-1;border:2px dashed #C6CBD5;border-radius:16px;background:#FCFCFA;padding:15px 16px;display:flex;align-items:center;justify-content:center;gap:13px;cursor:pointer;color:var(--ink);font:inherit;transition:border-color .12s,background .12s,transform .06s}
+.t-add:hover{border-color:var(--ak);background:#F4F6FB}
+.t-add:active{transform:scale(.995)}
+.t-add .plus{width:36px;height:36px;border-radius:11px;background:#23262B;color:#fff;font-size:21px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none;line-height:1}
+.t-add b{font-size:15px;display:block}
+.t-add small{display:block;font-size:11.5px;color:var(--mut);font-weight:400;margin-top:1px}
 .t-schnell{grid-column:1/-1;background:var(--card);border:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .t-schnell .l{font-size:10.5px;letter-spacing:.08em;color:var(--mut);flex:none}
 .schnell{flex:1;display:flex;gap:7px;min-width:260px}
@@ -86,7 +92,6 @@ button{font-family:inherit;cursor:pointer}
     <select id="kundeSel" aria-label="Aktiver Kunde"></select>
     <button class="btn" id="btnKVerw" title="Kunden anlegen, wechseln, löschen">Kunden verwalten</button>
     <span class="sep"></span>
-    <button class="btn ak" id="btnVertrag">+ Vertrag</button>
     <button class="btn" id="btnWord">Word-Vergleich</button>
     <button class="btn" id="btnPrint">Drucken / PDF</button>
     <button class="btn" id="btnSammel">Sammel-Kündigung</button>
@@ -116,6 +121,11 @@ button{font-family:inherit;cursor:pointer}
       <div class="l">FRISTEN-RADAR · ALLE KUNDEN · 90 TAGE</div>
       <div id="fristen"></div>
     </div>
+
+    <button class="t-add" id="btnVertragGross" type="button">
+      <span class="plus" aria-hidden="true">+</span>
+      <span style="text-align:left"><b>Vertrag erfassen</b><small id="addSub">Öffnet den Vertrags-Editor</small></span>
+    </button>
 
     <div class="tile t-schnell">
       <span class="l">SCHNELLERFASSUNG (COPILOT)</span>
@@ -235,6 +245,8 @@ function render(){
   $('ringC').setAttribute('stroke-dasharray', (ring * q / 100).toFixed(1) + ' ' + ring.toFixed(1));
   $('ringTxt').textContent = q > 0 ? q + ' % Ersparnis' : 'noch offen';
 
+  $('addSub').textContent = 'Öffnet den Vertrags-Editor für ' + ((st.kunde || '').trim() || 'den aktiven Kunden');
+
   const heute = new Date();
   const fr = [];
   alleKunden().forEach(({meta, st}) => {
@@ -271,8 +283,8 @@ $('btnKVerw').addEventListener('click', () => {
   if(!hatKern) return;
   BVK.kundenDialog({ onChange: render });
 });
-$('btnVertrag').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() : null, null));
 $('bzNeu').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() : null, null));
+$('btnVertragGross').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() : null, null));
 $('btnWord').addEventListener('click', async () => {
   if(!hatKern) return;
   const st = BVK.aktiverState();
