@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline · Bestandsvergleich</title>
+<script src="kern.js"></script>
+<style>
+:root{--bg:#F2F4F6;--col:#EAEDF1;--card:#fff;--line:#DDE2E9;--ink:#1D2733;--mut:#8592A2;--mut2:#5B6878;--ak:#155E4C;--amber:#8A6410;--rot:#B3372B;--mono:ui-monospace,'SF Mono',Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;gap:10px;flex-wrap:wrap}
+.top h1{margin:0;font-size:15px;font-weight:600}
+.top h1 small{font-weight:400;font-size:12px;color:var(--mut)}
+.top .r{display:flex;gap:6px;flex-wrap:wrap}
+.top select{border:1px solid var(--line);border-radius:99px;padding:6px 11px;font-size:12px;background:#fff}
+.board{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px;align-items:start;padding:0 18px 20px;overflow-x:auto}
+.col{background:var(--col);border-radius:12px;padding:9px;min-height:120px}
+.col.gr{background:#E4F0EA}
+.colh{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--mut2);padding:0 3px 7px}
+.col.gr .colh{color:#1C5C42}
+.karte{background:var(--card);border-radius:9px;padding:9px 11px;box-shadow:0 1px 2px rgba(29,39,51,.08);margin-bottom:7px;cursor:grab;border:1px solid transparent}
+.karte:active{cursor:grabbing}
+.karte.drag{opacity:.5}
+.karte b{font-size:12.5px}
+.karte .s{font-size:11px;color:var(--mut);margin-top:1px}
+.karte .chips{margin-top:5px;display:flex;gap:5px;flex-wrap:wrap}
+.chip{font-size:10px;font-weight:600;border-radius:4px;padding:1px 6px}
+.chip.rot{background:#FBE9E7;color:var(--rot)}
+.chip.amber{background:#FBF2DC;color:var(--amber)}
+.chip.gr{background:#E4F2EA;color:#1C7A4D}
+.karte .akt{display:flex;gap:2px;justify-content:flex-end;margin-top:5px}
+.karte .akt button,.karte .akt a{border:none;background:none;color:var(--mut);font-size:12px;padding:2px 5px;border-radius:5px;text-decoration:none}
+.karte .akt button:hover,.karte .akt a:hover{background:var(--col);color:var(--ink)}
+.col.over{outline:2px dashed var(--ak);outline-offset:-4px}
+.hint{padding:0 18px 20px;font-size:11.5px;color:var(--mut)}
+#kernfehlt{display:none;margin:0 18px 14px;background:#FBE9E7;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1D2733;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Pipeline <small>· Verträge über alle Kunden nach Status</small></h1>
+  <div class="r">
+    <select id="fKunde"><option value="">Alle Kunden</option></select>
+    <select id="ansichtSel" aria-label="Ansicht wählen">
+      <option value="pipeline">Ansicht: Pipeline</option>
+      <option value="home">Home öffnen</option>
+      <option value="werkbank">Werkbank öffnen</option>
+      <option value="dokument">Dokument-Studio öffnen</option>
+      <option value="assistent">Assistent öffnen</option>
+      <option value="copilot">Copilot öffnen</option>
+      <option value="klassisch">Klassisch öffnen</option>
+    </select>
+  </div>
+</div>
+<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+<div class="board" id="board"></div>
+<div class="hint">Karten per Drag-and-drop verschieben oder mit ◀ ▶ · ↗W öffnet den Vertrag in der Werkbank, ↗K die klassische Ansicht (Kündigung). Der Status wird am Vertrag gespeichert und ist in allen Ansichten gleich.</div>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const hatKern = !!window.BVK;
+if(!hatKern) $('kernfehlt').style.display = 'block';
+try{ localStorage.setItem('bv_ansicht', 'pipeline'); }catch(e){}
+
+const SPALTEN = [
+  { id:'erfasst',    titel:'ERFASST' },
+  { id:'angebot',    titel:'R+V-ANGEBOT' },
+  { id:'kuendigung', titel:'KÜNDIGUNG RAUS' },
+  { id:'umgedeckt',  titel:'UMGEDECKT', gr:true }
+];
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m){
+  const t = $('toast');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('show'), 2000);
+}
+function statusOf(p){
+  if(p.status && SPALTEN.some(s => s.id === p.status)) return p.status;
+  return BVK.rvEffective(p) != null ? 'angebot' : 'erfasst';
+}
+function setStatus(kid, pid, status){
+  const st = BVK.stateVon(kid);
+  if(!st) return;
+  const p = st.policies.find(x => x.id === pid);
+  if(!p) return;
+  p.status = status;
+  BVK.speichern(kid, st);
+  render();
+}
+function alleKarten(){
+  const out = [];
+  BVK.liste().forEach(k => {
+    const st = BVK.stateVon(k.id);
+    (st.policies || []).forEach(p => out.push({ kid: k.id, kunde: k.name, p }));
+  });
+  return out;
+}
+function render(){
+  if(!hatKern) return;
+  const board = $('board');
+  board.innerHTML = '';
+  const fk = $('fKunde').value;
+  const karten = alleKarten().filter(x => !fk || x.kid === fk);
+  const heute = new Date();
+
+  SPALTEN.forEach((sp, si) => {
+    const col = document.createElement('div');
+    col.className = 'col' + (sp.gr ? ' gr' : '');
+    col.dataset.status = sp.id;
+    const eintraege = karten.filter(x => statusOf(x.p) === sp.id);
+    let summe = 0;
+    eintraege.forEach(x => {
+      if(sp.id === 'umgedeckt'){
+        const aF = BVK.annual(x.p, 'f'), aR = BVK.annual(x.p, 'rv');
+        if(aF != null && aR != null) summe += aF - aR;
+      } else {
+        summe += BVK.annual(x.p, 'f') || 0;
+      }
+    });
+    const sumTxt = sp.id === 'umgedeckt'
+      ? (summe > 0 ? '+ ' + BVK.fmtNum(summe) + ' € gespart' : '—')
+      : BVK.fmtNum(summe) + ' €/J';
+    col.innerHTML = '<div class="colh"><span>' + sp.titel + ' · ' + eintraege.length + '</span><span>' + sumTxt + '</span></div>';
+
+    eintraege.forEach(x => {
+      const p = x.p;
+      const k = document.createElement('div');
+      k.className = 'karte';
+      k.draggable = true;
+      const aF = BVK.annual(p, 'f'), aR = BVK.annual(p, 'rv');
+      let geld = aF != null ? BVK.fmtNum(aF) + ' €/J' : '—';
+      if(aR != null) geld += ' → <b style="color:#155E4C">' + BVK.fmtNum(aR) + ' €</b>';
+      let chips = '';
+      const f = BVK.fristDate(p);
+      if(f){
+        const tage = Math.round((f - heute) / 864e5);
+        if(tage <= 90) chips += '<span class="chip ' + (tage <= 14 ? 'rot' : 'amber') + '">' + (tage < 0 ? 'Frist vorbei' : 'Frist in ' + tage + ' T.') + '</span>';
+      }
+      if(p.rabattApply && p.rabatt > 0) chips += '<span class="chip gr">−' + p.rabatt + '% intern</span>';
+      k.innerHTML =
+        '<b>' + esc(BVK.sparteOf(p).name) + ' · ' + esc(p.gesellschaft || '—') + '</b>' +
+        '<div class="s">' + esc(x.kunde) + (p.vsnr ? ' · ' + esc(p.vsnr) : '') + ' · ' + geld + '</div>' +
+        (chips ? '<div class="chips">' + chips + '</div>' : '') +
+        '<div class="akt">' +
+          (si > 0 ? '<button data-a="l" title="Status zurück">◀</button>' : '') +
+          (si < SPALTEN.length - 1 ? '<button data-a="r" title="Status weiter">▶</button>' : '') +
+          '<a href="werkbank.html" data-a="w" title="In Werkbank öffnen">↗W</a>' +
+          '<a href="index.html" data-a="k" title="Klassisch öffnen (Kündigung)">↗K</a>' +
+        '</div>';
+      k.addEventListener('dragstart', e => {
+        k.classList.add('drag');
+        e.dataTransfer.setData('text/plain', x.kid + '|' + p.id);
+      });
+      k.addEventListener('dragend', () => k.classList.remove('drag'));
+      const bl = k.querySelector('[data-a="l"]');
+      if(bl) bl.addEventListener('click', () => setStatus(x.kid, p.id, SPALTEN[si - 1].id));
+      const br = k.querySelector('[data-a="r"]');
+      if(br) br.addEventListener('click', () => setStatus(x.kid, p.id, SPALTEN[si + 1].id));
+      k.querySelectorAll('a').forEach(a => a.addEventListener('click', () => BVK.setAktiv(x.kid)));
+      col.appendChild(k);
+    });
+
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('over'));
+    col.addEventListener('drop', e => {
+      e.preventDefault();
+      col.classList.remove('over');
+      const [kid, pid] = (e.dataTransfer.getData('text/plain') || '').split('|');
+      if(kid && pid){
+        setStatus(kid, pid, sp.id);
+        if(sp.id === 'kuendigung') toast('Status gesetzt — Kündigungsschreiben über ↗K in der klassischen Ansicht erstellen.');
+      }
+    });
+    board.appendChild(col);
+  });
+}
+function fillKunden(){
+  if(!hatKern) return;
+  const sel = $('fKunde');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Alle Kunden</option>';
+  BVK.liste().forEach(k => {
+    const o = document.createElement('option');
+    o.value = k.id; o.textContent = k.name;
+    sel.appendChild(o);
+  });
+  sel.value = cur;
+}
+$('fKunde').addEventListener('change', render);
+$('ansichtSel').addEventListener('change', e => {
+  const v = e.target.value;
+  e.target.value = 'pipeline';
+  const Z = { home:'home.html', werkbank:'werkbank.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html', klassisch:'index.html' };
+  if(Z[v]){ try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
+});
+function resync(){ if(hatKern){ BVK.reload(); fillKunden(); render(); } }
+window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
+fillKunden();
+render();
+</script>
+</body>
+</html>

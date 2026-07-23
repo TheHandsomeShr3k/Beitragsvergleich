@@ -483,12 +483,12 @@ try{
   <div class="top-actions">
     <select id="ansichtSel" class="theme-sel" aria-label="Ansicht wählen">
       <option value="klassisch">Ansicht: Klassisch</option>
+      <option value="home">Home öffnen</option>
       <option value="werkbank">Werkbank öffnen</option>
-      <option value="pipeline" disabled>Pipeline (bald)</option>
-      <option value="home" disabled>Home (bald)</option>
-      <option value="dokument" disabled>Dokument-Studio (bald)</option>
-      <option value="assistent" disabled>Assistent (bald)</option>
-      <option value="copilot" disabled>Copilot (bald)</option>
+      <option value="pipeline">Pipeline öffnen</option>
+      <option value="dokument">Dokument-Studio öffnen</option>
+      <option value="assistent">Assistent öffnen</option>
+      <option value="copilot">Copilot öffnen</option>
     </select>
     <button class="btn ghost" id="btnDesign">Design</button>
     <button class="btn ghost" id="btnLoad">Datei öffnen</button>
@@ -2173,27 +2173,43 @@ function wechsleKunde(id){
   renderAll();
 }
 $('kundeSel').addEventListener('change', e => wechsleKunde(e.target.value));
-window.addEventListener('storage', e => {
-  if(window.BVK && (e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1')){
+function kernResync(){
+  if(!window.BVK) return;
+  try{
     BVK.reload();
-    kundeSig = '';
-    state = ensureStateShape(BVK.aktiverState());
-    $('kunde').value = state.kunde || '';
-    $('spalte').value = state.spalte || 'Anderer Versicherer';
-    refreshKundeSel();
-    renderAll();
-  }
+    const fresh = ensureStateShape(BVK.aktiverState());
+    fresh.policies.forEach(p => { if(p.gesellschaft) p.gesellschaft = shortenGesName(p.gesellschaft); });
+    if(JSON.stringify(fresh) !== JSON.stringify(state)){
+      state = fresh;
+      $('kunde').value = state.kunde || '';
+      $('spalte').value = state.spalte || 'Anderer Versicherer';
+      kundeSig = '';
+      refreshKundeSel();
+      renderAll();
+    } else {
+      kundeSig = '';
+      refreshKundeSel();
+    }
+  }catch(e){}
+}
+window.addEventListener('storage', e => {
+  if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') kernResync();
 });
+window.addEventListener('pageshow', e => { if(e.persisted) kernResync(); });
+window.addEventListener('focus', kernResync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) kernResync(); });
 (function initAnsicht(){
   const sel = $('ansichtSel');
   if(!sel) return;
   sel.value = 'klassisch';
+  const ZIELE = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html' };
   sel.addEventListener('change', () => {
     const v = sel.value;
     sel.value = 'klassisch';
-    if(v === 'werkbank'){
-      if(store){ try{ store.setItem('bv_ansicht', 'werkbank'); }catch(e){} }
-      location.href = 'werkbank.html';
+    if(ZIELE[v]){
+      if(window.BVK){ try{ BVK.speichern(BVK.aktivId(), state); }catch(e){} }
+      if(store){ try{ store.setItem('bv_ansicht', v); }catch(e){} }
+      location.href = ZIELE[v];
     }
   });
 })();

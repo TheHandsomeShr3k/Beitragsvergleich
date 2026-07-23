@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assistent · Bestandsvergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="kern.js"></script>
+<style>
+:root{--bg:#F7F8FA;--card:#fff;--line:#E8EAEE;--ink:#1A2333;--mut:#7A8294;--mut2:#9AA2B2;--ak:#1552B4;--ak-bg:#EAF1FC;--gruen:#1C7A4D;--rot:#B3372B;--mono:ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+button{font-family:inherit;cursor:pointer}
+.kopf{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px}
+.kz{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mut)}
+.kz b{color:var(--ink);font-size:13px}
+.kz select{border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;background:#fff}
+.prog{display:flex;gap:6px;margin-top:9px}
+.prog i{flex:1;height:4px;border-radius:99px;background:#E3E6EC}
+.prog i.on{background:var(--ak)}
+.steps{display:flex;gap:18px;margin-top:7px;font-size:11.5px;color:var(--mut2)}
+.steps span.on{color:var(--ak);font-weight:600}
+.rumpf{flex:1;display:grid;grid-template-columns:210px 1fr;min-height:0}
+.rail{border-right:1px solid var(--line);background:#FBFCFD;padding:16px;font-size:12px;overflow:auto}
+.rail .sec{font-size:10.5px;letter-spacing:.08em;color:var(--mut2);margin-bottom:8px}
+.rk{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:7px}
+.rk b{font-size:12px}
+.rk div{color:var(--mut);font-size:11px}
+.rsum{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--mut)}
+.rsum strong{color:var(--ink);font-size:14px;font-family:var(--mono)}
+.buehne{padding:24px 30px;display:flex;flex-direction:column;overflow:auto}
+.ueber{font-size:12px;color:var(--ak);font-weight:600;letter-spacing:.04em}
+.frage{font-size:21px;font-weight:600;margin-top:4px}
+.hint{font-size:13px;color:var(--mut);margin-top:3px}
+.inhalt{margin-top:16px;max-width:540px}
+.f{margin-bottom:10px}
+.f label{display:block;font-size:11.5px;color:var(--mut);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;border:1px solid #DDE2EA;border-radius:9px;padding:9px 12px;font-size:13.5px;background:#fff;font-family:inherit}
+.f textarea{min-height:60px;resize:vertical}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--ak);outline:none;box-shadow:0 0 0 3px rgba(21,82,180,.12)}
+.zwei{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drei{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{font-size:13px;padding:10px 16px;border-radius:10px;border:1px solid #DDE2EA;background:#fff;font-weight:500}
+.chips button.on{border:2px solid var(--ak);background:var(--ak-bg);color:var(--ak);font-weight:600;padding:9px 15px}
+.leiste{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:22px;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid #DDE2EA;background:#fff;border-radius:10px;padding:10px 20px;font-size:13.5px;font-weight:500}
+.btn.ak{background:var(--ak);border-color:var(--ak);color:#fff;font-weight:600}
+.btn.leise{border:none;background:none;color:var(--mut)}
+.rvk{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+.rvk b{font-size:13.5px}
+.rvk .s{font-size:11.5px;color:var(--mut);font-family:var(--mono)}
+.fertig{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;max-width:540px}
+.fertig .z{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F0F2F6;font-size:13px}
+.fertig .z:last-child{border-bottom:none}
+.fertig .z b{font-family:var(--mono)}
+.gr{color:var(--gruen)}
+#kernfehlt{display:none;margin:12px 20px;background:#F6E5E1;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1A2333;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+@media (max-width:760px){.rumpf{grid-template-columns:1fr}.rail{display:none}}
+</style>
+</head>
+<body>
+<div class="kopf">
+  <div class="kz">
+    <b id="kzTitel">Neue Beratung</b>
+    <span id="kzStep">Schritt 1 von 4</span>
+    <select id="ansichtSel" aria-label="Ansicht wählen">
+      <option value="assistent">Ansicht: Assistent</option>
+      <option value="home">Home öffnen</option>
+      <option value="werkbank">Werkbank öffnen</option>
+      <option value="pipeline">Pipeline öffnen</option>
+      <option value="dokument">Dokument-Studio öffnen</option>
+      <option value="copilot">Copilot öffnen</option>
+      <option value="klassisch">Klassisch öffnen</option>
+    </select>
+  </div>
+  <div class="prog" id="prog"><i></i><i></i><i></i><i></i></div>
+  <div class="steps" id="steps">
+    <span>Kunde</span><span>Verträge erfassen</span><span>R+V-Vergleich</span><span>Export</span>
+  </div>
+</div>
+<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+
+<div class="rumpf">
+  <div class="rail">
+    <div class="sec">BISHER ERFASST</div>
+    <div id="railListe"></div>
+    <div class="rsum" id="railSum"></div>
+  </div>
+  <div class="buehne" id="buehne"></div>
+</div>
+<div id="toast" role="status"></div>
+<datalist id="gesListe"></datalist>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const hatKern = !!window.BVK;
+if(!hatKern) $('kernfehlt').style.display = 'block';
+try{ localStorage.setItem('bv_ansicht', 'assistent'); }catch(e){}
+
+let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'Anderer Versicherer', policies:[], absender:{name:'',strasse:'',ort:''}, kOrtWahl:'Röthenbach' };
+let step = 1;
+let wahlSparte = 'phv';
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m){
+  const t = $('toast');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function speichern(){ if(hatKern) BVK.speichern(BVK.aktivId(), state); }
+function sortiert(){ return [...state.policies].sort((a, b) => (a.created || 0) - (b.created || 0)); }
+function f(labelTxt, el){
+  const w = document.createElement('div');
+  w.className = 'f';
+  const l = document.createElement('label');
+  l.textContent = labelTxt;
+  w.append(l, el);
+  return w;
+}
+function inp(type, val, ph){
+  const i = document.createElement('input');
+  i.type = type; i.value = val ?? '';
+  if(ph) i.placeholder = ph;
+  return i;
+}
+function zwSel(val){
+  const s = document.createElement('select');
+  Object.keys(BVK.ZW).forEach(k => {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = BVK.ZW[k].l;
+    if(k === val) o.selected = true;
+    s.appendChild(o);
+  });
+  return s;
+}
+
+function renderRail(){
+  const w = $('railListe');
+  w.innerHTML = '';
+  const arr = sortiert();
+  if(!arr.length) w.innerHTML = '<div style="color:var(--mut2)">Noch keine Verträge.</div>';
+  arr.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'rk';
+    const aF = BVK.annual(p, 'f');
+    el.innerHTML = '<b>' + esc(BVK.sparteOf(p).name) + '</b><div>' + esc(p.gesellschaft || '—') + (aF != null ? ' · ' + BVK.fmtNum(aF) + ' €/J' : '') + '</div>';
+    w.appendChild(el);
+  });
+  const t = BVK.totals(state);
+  $('railSum').innerHTML = 'Bisher gesamt<br><strong>' + (t.f == null ? '—' : BVK.fmtNum(t.f) + ' €/Jahr') + '</strong>' +
+    (t.save != null ? '<br><span style="color:var(--gruen)">Ersparnis ' + BVK.fmtNum(Math.abs(t.save)) + ' €</span>' : '');
+}
+function kopf(ueber, frage, hint){
+  return '<div class="ueber">' + ueber + '</div><div class="frage">' + frage + '</div>' + (hint ? '<div class="hint">' + hint + '</div>' : '');
+}
+function leiste(zurueck, weiterTxt, weiterFn, extra){
+  const l = document.createElement('div');
+  l.className = 'leiste';
+  const bz = document.createElement('button');
+  bz.className = 'btn leise';
+  bz.textContent = '← Zurück';
+  bz.style.visibility = zurueck ? 'visible' : 'hidden';
+  bz.addEventListener('click', () => { step = Math.max(1, step - 1); render(); });
+  const r = document.createElement('div');
+  r.style.display = 'flex'; r.style.gap = '10px'; r.style.alignItems = 'center';
+  if(extra) r.appendChild(extra);
+  const bw = document.createElement('button');
+  bw.className = 'btn ak';
+  bw.textContent = weiterTxt;
+  bw.addEventListener('click', weiterFn);
+  r.appendChild(bw);
+  l.append(bz, r);
+  return l;
+}
+
+function render(){
+  $('kzTitel').textContent = 'Beratung · ' + ((state.kunde || '').trim() || 'Neuer Kunde');
+  $('kzStep').textContent = 'Schritt ' + step + ' von 4';
+  [...$('prog').children].forEach((i, n) => i.classList.toggle('on', n < step));
+  [...$('steps').children].forEach((s, n) => s.classList.toggle('on', n === step - 1));
+  renderRail();
+  const b = $('buehne');
+  b.innerHTML = '';
+
+  if(step === 1){
+    b.innerHTML = kopf('SCHRITT 1', 'Für wen ist die Beratung?', 'Name des Kunden und Absenderdaten für spätere Kündigungen.');
+    const box = document.createElement('div');
+    box.className = 'inhalt';
+    const iK = inp('text', state.kunde, 'Familie Mustermann');
+    iK.addEventListener('input', () => { state.kunde = iK.value; speichern(); });
+    box.appendChild(f('Kunde / Familie', iK));
+    const z = document.createElement('div'); z.className = 'zwei';
+    const iN = inp('text', state.absender.name, 'Vorname Nachname');
+    iN.addEventListener('input', () => { state.absender.name = iN.value; speichern(); });
+    const iS = inp('text', state.absender.strasse, 'Straße und Hausnummer');
+    iS.addEventListener('input', () => { state.absender.strasse = iS.value; speichern(); });
+    z.append(f('Versicherungsnehmer (Absender)', iN), f('Straße', iS));
+    box.appendChild(z);
+    const iO = inp('text', state.absender.ort, 'PLZ und Ort');
+    iO.addEventListener('input', () => { state.absender.ort = iO.value; speichern(); });
+    box.appendChild(f('PLZ und Ort', iO));
+    b.appendChild(box);
+    b.appendChild(leiste(false, 'Weiter →', () => { step = 2; render(); }));
+  }
+
+  if(step === 2){
+    const nr = state.policies.length + 1;
+    b.innerHTML = kopf('SCHRITT 2 · VERTRAG ' + nr, 'Welche Versicherung kommt als Nächstes?', 'Ein Vertrag pro Durchgang — „speichern" hängt ihn an und leert die Felder.');
+    const box = document.createElement('div');
+    box.className = 'inhalt';
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    BVK.SPARTEN.forEach(s => {
+      const c = document.createElement('button');
+      c.textContent = s.name;
+      c.classList.toggle('on', wahlSparte === s.id);
+      c.addEventListener('click', () => { wahlSparte = s.id; render(); });
+      chips.appendChild(c);
+    });
+    box.appendChild(chips);
+    box.appendChild(document.createElement('br'));
+
+    const gIn = inp('text', '', 'Gesellschaft');
+    gIn.setAttribute('list', 'gesListe');
+    const vIn = inp('text', '', 'Versicherungsnummer');
+    const z1 = document.createElement('div'); z1.className = 'zwei';
+    z1.append(f('Gesellschaft (bisher)', gIn), f('Versicherungsnummer', vIn));
+    box.appendChild(z1);
+    const aIn = inp('date', '', '');
+    const soIn = inp('text', '', wahlSparte === 'kfz' ? 'AB-CD 123' : 'z. B. Schutzbrief');
+    const z2 = document.createElement('div'); z2.className = 'zwei';
+    z2.appendChild(f('Ablauf', aIn));
+    if(wahlSparte === 'kfz') z2.appendChild(f('Kennzeichen', soIn));
+    else if(wahlSparte === 'so') z2.appendChild(f('Bezeichnung', soIn));
+    box.appendChild(z2);
+    const ta = document.createElement('textarea');
+    ta.placeholder = 'Leistungen — eine Angabe pro Zeile';
+    box.appendChild(f('Leistungen (bisher)', ta));
+    const bIn = inp('text', '', '89,90');
+    bIn.inputMode = 'decimal';
+    const zS = zwSel('jaehrlich');
+    const jS = document.createElement('select');
+    const y = new Date().getFullYear();
+    for(let i = 0; i <= 8; i++){ const o = document.createElement('option'); o.value = String(y - i); o.textContent = i === 0 ? y + ' (aktuell)' : String(y - i); jS.appendChild(o); }
+    const g = document.createElement('div'); g.className = 'drei';
+    g.append(f('Beitrag (€)', bIn), f('Zahlweise', zS), f('Beitragsstand', jS));
+    box.appendChild(g);
+    b.appendChild(box);
+
+    const speichernBtn = document.createElement('button');
+    speichernBtn.className = 'btn';
+    speichernBtn.textContent = '+ Vertrag speichern, weiteren erfassen';
+    speichernBtn.addEventListener('click', () => {
+      if(!gIn.value.trim() && !vIn.value.trim() && ta.value.trim() === '' && !bIn.value.trim()){ toast('Bitte mindestens Gesellschaft oder Beitrag angeben.'); return; }
+      state.policies.push({
+        id: 'p' + Date.now() + Math.random().toString(36).slice(2,6), created: Date.now(),
+        sparte: wahlSparte, label: wahlSparte === 'so' ? soIn.value.trim() : '',
+        gesellschaft: gIn.value.trim(), vsnr: vIn.value.trim(), ablauf: aIn.value,
+        personen: '', kennzeichen: wahlSparte === 'kfz' ? soIn.value.trim() : '',
+        leistF: ta.value, beitragF: BVK.parseEuro(bIn.value), zwF: zS.value,
+        beitragsjahrF: parseInt(jS.value, 10) || y,
+        rv: false, leistRV: '', beitragRV: null, zwRV: 'jaehrlich', rabatt: null, rabattApply: false
+      });
+      speichern();
+      toast('Vertrag ' + nr + ' gespeichert.');
+      render();
+    });
+    b.appendChild(leiste(true, 'Weiter zum Vergleich →', () => {
+      if(!state.policies.length){ toast('Erst mindestens einen Vertrag speichern.'); return; }
+      step = 3; render();
+    }, speichernBtn));
+  }
+
+  if(step === 3){
+    b.innerHTML = kopf('SCHRITT 3', 'Was bietet die R+V?', 'Angebot je Vertrag — leer gelassene stehen im Dokument mit 0,00 €.');
+    const box = document.createElement('div');
+    box.className = 'inhalt';
+    box.style.maxWidth = '620px';
+    sortiert().forEach(p => {
+      const k = document.createElement('div');
+      k.className = 'rvk';
+      k.innerHTML = '<b>' + esc(BVK.displayName(p)) + '</b> <span class="s">· ' + esc(p.gesellschaft || '—') +
+        (BVK.annual(p, 'f') != null ? ' · bisher ' + BVK.fmtNum(BVK.annual(p, 'f')) + ' €/J' : '') + '</span>';
+      const ta = document.createElement('textarea');
+      ta.value = p.leistRV || '';
+      ta.placeholder = 'Leistungen R+V — eine Angabe pro Zeile';
+      ta.addEventListener('input', () => { p.leistRV = ta.value; speichern(); });
+      k.appendChild(f('Leistungen R+V', ta));
+      const bIn = inp('text', p.beitragRV != null ? BVK.fmtNum(p.beitragRV) : '', 'kein Angebot = leer');
+      bIn.inputMode = 'decimal';
+      bIn.addEventListener('change', () => { p.beitragRV = BVK.parseEuro(bIn.value); p.rv = p.beitragRV != null; speichern(); renderRail(); });
+      const zS = zwSel(p.zwRV);
+      zS.addEventListener('change', () => { p.zwRV = zS.value; speichern(); renderRail(); });
+      const z = document.createElement('div'); z.className = 'zwei';
+      z.append(f('Beitrag R+V (€)', bIn), f('Zahlweise', zS));
+      k.appendChild(z);
+      box.appendChild(k);
+    });
+    b.appendChild(box);
+    b.appendChild(leiste(true, 'Weiter zum Export →', () => { step = 4; render(); }));
+  }
+
+  if(step === 4){
+    const t = BVK.totals(state);
+    const fS = sortiert().reduce((s, p) => s + (BVK.annual(p, 'f') || 0), 0);
+    const rS = sortiert().reduce((s, p) => s + (BVK.annual(p, 'rv') || 0), 0);
+    b.innerHTML = kopf('SCHRITT 4', 'Fertig — Ergebnis für ' + esc((state.kunde || '').trim() || 'den Kunden'), 'Dokument erzeugen; Kündigungen laufen über die klassische Ansicht.');
+    const box = document.createElement('div');
+    box.className = 'fertig';
+    box.innerHTML =
+      '<div class="z"><span>Verträge erfasst</span><b>' + state.policies.length + '</b></div>' +
+      '<div class="z"><span>Bisher / Jahr</span><b>' + BVK.fmtNum(fS) + ' €</b></div>' +
+      '<div class="z"><span>R+V / Jahr</span><b>' + BVK.fmtNum(rS) + ' €</b></div>' +
+      '<div class="z"><span>Differenz / Jahr</span><b class="' + (fS - rS >= 0 ? 'gr' : '') + '">' + (fS - rS < 0 ? '− ' : '') + BVK.fmtNum(Math.abs(fS - rS)) + ' €</b></div>' +
+      (t.save != null ? '<div class="z"><span>Ersparnis (verglichene Verträge)</span><b class="gr">' + BVK.fmtNum(Math.abs(t.save)) + ' €</b></div>' : '');
+    b.appendChild(box);
+    const l = document.createElement('div');
+    l.className = 'leiste';
+    l.innerHTML = '';
+    const bz = document.createElement('button');
+    bz.className = 'btn leise'; bz.textContent = '← Zurück';
+    bz.addEventListener('click', () => { step = 3; render(); });
+    const r = document.createElement('div');
+    r.style.display = 'flex'; r.style.gap = '10px'; r.style.flexWrap = 'wrap';
+    const bW = document.createElement('button');
+    bW.className = 'btn ak'; bW.textContent = 'Word-Vergleich erstellen';
+    bW.addEventListener('click', async () => {
+      try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
+      catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
+    });
+    const bK = document.createElement('a');
+    bK.className = 'btn'; bK.textContent = 'Kündigungen (klassisch) ↗'; bK.href = 'index.html';
+    bK.style.textDecoration = 'none';
+    const bN = document.createElement('button');
+    bN.className = 'btn'; bN.textContent = 'Nächste Beratung starten';
+    bN.addEventListener('click', () => {
+      speichern();
+      BVK.neu('');
+      state = BVK.ensureStateShape(BVK.aktiverState());
+      step = 1; wahlSparte = 'phv';
+      render();
+      toast('Neuer Kunde angelegt.');
+    });
+    r.append(bW, bK, bN);
+    l.append(bz, r);
+    b.appendChild(l);
+  }
+}
+
+$('ansichtSel').addEventListener('change', e => {
+  const v = e.target.value;
+  e.target.value = 'assistent';
+  const Z = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', copilot:'copilot.html', klassisch:'index.html' };
+  if(Z[v]){ speichern(); try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
+});
+function resync(){
+  if(!hatKern) return;
+  BVK.reload();
+  const fresh = BVK.ensureStateShape(BVK.aktiverState());
+  if(JSON.stringify(fresh) !== JSON.stringify(state)){ state = fresh; render(); }
+}
+window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
+window.addEventListener('beforeunload', speichern);
+
+if(hatKern){
+  const dl = $('gesListe');
+  [...new Set(Object.values(BVK.adressbuch()).map(v => v.n).concat(BVK.VERZEICHNIS.map(v => v.n)))]
+    .sort((a, b) => a.localeCompare(b, 'de'))
+    .forEach(n => { const o = document.createElement('option'); o.value = n; dl.appendChild(o); });
+}
+render();
+</script>
+</body>
+</html>

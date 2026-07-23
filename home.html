@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home · Bestandsvergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="kern.js"></script>
+<style>
+:root{--bg:#F4F3F0;--card:#fff;--line:#E7E5DF;--ink:#23262B;--mut:#8B8E94;--mut2:#5c5f66;--ak:#2C4A8F;--gruen:#1C7A4D;--amber:#A06514;--rot:#B3372B;--mono:ui-monospace,'SF Mono',Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+.top{display:flex;justify-content:space-between;align-items:baseline;padding:18px 22px 10px;flex-wrap:wrap;gap:8px}
+.top h1{margin:0;font-size:17px;font-weight:600}
+.top h1 small{font-weight:400;font-size:12px;color:var(--mut)}
+.top select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:118px;gap:11px;padding:8px 22px 26px;max-width:1120px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0;overflow:hidden}
+.tile .l{font-size:10.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:6px}
+.t-bilanz{grid-column:span 2;grid-row:span 2;background:#23262B;color:#F4F3F0;border-color:#23262B;display:flex;flex-direction:column}
+.t-bilanz .l{color:#9B9EA5}
+.bz{display:flex;gap:26px;margin-top:6px;flex-wrap:wrap}
+.bz .v{font-family:var(--mono);font-size:21px;font-weight:600}
+.bz small{display:block;font-size:11px;color:#9B9EA5;font-family:-apple-system,sans-serif;font-weight:400}
+.bar{height:8px;border-radius:99px;background:#3A3E45;overflow:hidden;margin-top:auto}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#6FE0A8,#8FB6FF)}
+.t-bilanz .fuss{font-size:11.5px;color:#9B9EA5;margin-top:7px}
+.t-bilanz .fuss a{color:#F4F3F0}
+.t-fristen{grid-column:span 2;grid-row:span 2;display:flex;flex-direction:column}
+.frow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F0EEE8;font-size:12.5px;gap:8px}
+.frow:last-child{border-bottom:none}
+.frow .w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{flex:none;font-size:10.5px;font-weight:600;border-radius:99px;padding:2px 9px}
+.pill.rot{background:#FBE9E7;color:var(--rot)}
+.pill.amber{background:#FBF2DC;color:var(--amber)}
+.pill.gr{background:#EDF1EA;color:#4C6B52}
+.t-schnell{grid-column:span 2}
+.schnell{display:flex;gap:7px}
+.schnell input{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px}
+.schnell button{border:none;border-radius:9px;background:#23262B;color:#fff;padding:8px 14px;font-size:12.5px;font-weight:600}
+.t-ring{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.t-ring b{font-size:12px;margin-top:3px}
+.t-letzt .k{font-size:12.5px;padding:3px 0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-letzt .k:hover{color:var(--ak)}
+.t-letzt .k small{color:var(--mut)}
+.t-akt{display:flex;flex-direction:column;gap:6px;justify-content:center}
+.t-akt button,.t-akt a{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:500;color:var(--ink);text-decoration:none;text-align:left}
+.t-akt button:hover,.t-akt a:hover{border-color:var(--ak);color:var(--ak)}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#23262B;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+#kernfehlt{display:none;margin:14px 22px;background:#FBE9E7;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
+@media (max-width:860px){.grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:auto}.t-bilanz,.t-fristen,.t-schnell{grid-column:span 2}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1 id="gruss">Home <small id="datum"></small></h1>
+  <select id="ansichtSel" aria-label="Ansicht wählen">
+    <option value="home">Ansicht: Home</option>
+    <option value="werkbank">Werkbank öffnen</option>
+    <option value="pipeline">Pipeline öffnen</option>
+    <option value="dokument">Dokument-Studio öffnen</option>
+    <option value="assistent">Assistent öffnen</option>
+    <option value="copilot">Copilot öffnen</option>
+    <option value="klassisch">Klassisch öffnen</option>
+  </select>
+</div>
+<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+
+<div class="grid">
+  <div class="tile t-bilanz">
+    <div class="l" id="bilanzL">JAHRESBILANZ</div>
+    <div class="bz">
+      <div><small>Bisher</small><span class="v" id="vF">—</span></div>
+      <div><small>R+V</small><span class="v" id="vR" style="color:#8FB6FF">—</span></div>
+      <div><small>Ersparnis</small><span class="v" id="vS" style="color:#6FE0A8">—</span></div>
+    </div>
+    <div class="bar"><i id="barI" style="width:0%"></i></div>
+    <div class="fuss" id="barTxt"></div>
+  </div>
+
+  <div class="tile t-fristen">
+    <div class="l">FRISTEN-RADAR · ALLE KUNDEN · NÄCHSTE 90 TAGE</div>
+    <div id="fristen" style="flex:1;overflow:auto"></div>
+  </div>
+
+  <div class="tile t-schnell">
+    <div class="l">SCHNELLERFASSUNG (Copilot)</div>
+    <div class="schnell">
+      <input id="schnellIn" type="text" placeholder="z. B. „phv allianz 737373, 60 € jährlich, ablauf 23.10.26“">
+      <button id="schnellGo">Erfassen</button>
+    </div>
+  </div>
+
+  <div class="tile t-ring">
+    <svg width="60" height="60" viewBox="0 0 60 60" role="img" aria-label="Ersparnisquote"><circle cx="30" cy="30" r="24" fill="none" stroke="#EEECE6" stroke-width="8"/><circle id="ringC" cx="30" cy="30" r="24" fill="none" stroke="#1C7A4D" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 151" transform="rotate(-90 30 30)"/></svg>
+    <b id="ringTxt">—</b>
+  </div>
+
+  <div class="tile t-letzt">
+    <div class="l">ZULETZT BEARBEITET</div>
+    <div id="letzt"></div>
+  </div>
+
+  <div class="tile t-akt">
+    <button id="aWord">Word-Vergleich (aktiver Kunde)</button>
+    <a href="werkbank.html">↗ Werkbank öffnen</a>
+    <button id="aNeu">+ Neuer Kunde</button>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const hatKern = !!window.BVK;
+if(!hatKern) $('kernfehlt').style.display = 'block';
+try{ localStorage.setItem('bv_ansicht', 'home'); }catch(e){}
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m){
+  const t = $('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+$('datum').textContent = new Date().toLocaleDateString('de-DE', {weekday:'long', day:'numeric', month:'long'});
+
+function alleKunden(){
+  return hatKern ? BVK.liste().map(k => ({ meta: k, st: BVK.stateVon(k.id) })) : [];
+}
+function render(){
+  if(!hatKern) return;
+  const aktivId = BVK.aktivId();
+  const st = BVK.ensureStateShape(BVK.aktiverState());
+  $('bilanzL').textContent = ((st.kunde || 'Unbenannter Kunde').toUpperCase()) + ' · JAHRESBILANZ';
+  const t = BVK.totals(st);
+  $('vF').textContent = t.f == null ? '—' : BVK.fmtNum(t.f) + ' €';
+  $('vR').textContent = t.r == null ? '—' : BVK.fmtNum(t.r) + ' €';
+  $('vS').textContent = t.save == null ? '—' : (t.save >= 0 ? '−' : '+') + BVK.fmtNum(Math.abs(t.save)) + ' €';
+  let q = 0;
+  if(t.f && t.save != null && t.save > 0) q = Math.max(0, Math.min(100, Math.round(t.save / t.f * 100)));
+  $('barI').style.width = q + '%';
+  $('barTxt').innerHTML = q > 0
+    ? q + ' % günstiger über die verglichenen Verträge · <a href="werkbank.html">Details in der Werkbank →</a>'
+    : '<a href="werkbank.html" style="color:#F4F3F0">Verträge in der Werkbank erfassen →</a>';
+  const ring = 2 * Math.PI * 24;
+  $('ringC').setAttribute('stroke-dasharray', (ring * q / 100).toFixed(1) + ' ' + ring.toFixed(1));
+  $('ringTxt').textContent = q > 0 ? q + ' % Ersparnis' : 'noch offen';
+
+  const heute = new Date();
+  const fr = [];
+  alleKunden().forEach(({meta, st}) => {
+    (st.policies || []).forEach(p => {
+      const f = BVK.fristDate(p);
+      if(!f) return;
+      const tage = Math.round((f - heute) / 864e5);
+      if(tage >= -14 && tage <= 90) fr.push({ tage, p, kunde: meta.name, kid: meta.id });
+    });
+  });
+  fr.sort((a, b) => a.tage - b.tage);
+  const fw = $('fristen');
+  fw.innerHTML = fr.length ? '' : '<div style="color:var(--mut);font-size:12.5px;padding:8px 0">Keine Kündigungsfristen in den nächsten 90 Tagen.</div>';
+  fr.slice(0, 7).forEach(x => {
+    const row = document.createElement('div');
+    row.className = 'frow';
+    const cls = x.tage <= 14 ? 'rot' : (x.tage <= 45 ? 'amber' : 'gr');
+    row.innerHTML = '<span class="w"><b>' + esc(BVK.displayName(x.p)) + '</b> · ' + esc(x.p.gesellschaft || '—') + ' · ' + esc(x.kunde) + '</span>' +
+      '<span class="pill ' + cls + '">' + (x.tage < 0 ? 'Frist vorbei' : 'noch ' + x.tage + ' Tage') + '</span>';
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => { BVK.setAktiv(x.kid); location.href = 'werkbank.html'; });
+    fw.appendChild(row);
+  });
+
+  const lz = $('letzt');
+  lz.innerHTML = '';
+  BVK.liste().sort((a, b) => b.geaendert - a.geaendert).slice(0, 4).forEach(k => {
+    const el = document.createElement('div');
+    el.className = 'k';
+    el.innerHTML = '<b>' + esc(k.name) + '</b> <small>· ' + k.anzahl + ' Verträge</small>' + (k.id === aktivId ? ' <small style="color:var(--ak)">aktiv</small>' : '');
+    el.addEventListener('click', () => { BVK.setAktiv(k.id); render(); toast(k.name + ' ist jetzt aktiv.'); });
+    lz.appendChild(el);
+  });
+}
+
+$('aWord').addEventListener('click', async () => {
+  if(!hatKern) return;
+  const st = BVK.aktiverState();
+  if(!st.policies.length){ toast('Der aktive Kunde hat noch keine Verträge.'); return; }
+  try{ await BVK.exportVergleichDocx(st); toast('Word-Datei erstellt.'); }
+  catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
+});
+$('aNeu').addEventListener('click', () => {
+  if(!hatKern) return;
+  const n = prompt('Name des neuen Kunden:', '');
+  if(n === null) return;
+  BVK.neu((n || '').trim());
+  render();
+  toast('Kunde angelegt und aktiviert.');
+});
+$('schnellGo').addEventListener('click', () => {
+  const v = $('schnellIn').value.trim();
+  try{ sessionStorage.setItem('bv_copilot_prefill', v); }catch(e){}
+  location.href = 'copilot.html';
+});
+$('schnellIn').addEventListener('keydown', e => { if(e.key === 'Enter') $('schnellGo').click(); });
+$('ansichtSel').addEventListener('change', e => {
+  const v = e.target.value;
+  e.target.value = 'home';
+  const Z = { werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html', klassisch:'index.html' };
+  if(Z[v]){ try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
+});
+function resync(){ if(hatKern){ BVK.reload(); render(); } }
+window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
+render();
+</script>
+</body>
+</html>

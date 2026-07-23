@@ -107,6 +107,15 @@ input,select{font-family:inherit;color:var(--ink)}
 .pal-item.on{background:var(--ak-bg);color:var(--ak);font-weight:600}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1C1E21;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
 #toast.show{opacity:1}
+.drow{border-bottom:1px solid var(--line2);background:#FCFCFA;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.drow label{font-size:10.5px;color:var(--mut);letter-spacing:.05em;display:block;margin-bottom:3px}
+.drow textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:12.5px;font-family:inherit;resize:vertical;background:#fff}
+.drow input,.drow select{width:100%;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12.5px;background:#fff}
+.drei{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px;grid-column:1/-1}
+.rabzeile{display:flex;gap:8px;align-items:center;grid-column:1/-1;font-size:12px;color:var(--mut2)}
+.rabzeile input[type=text]{width:64px;text-align:right;font-family:var(--mono)}
+.rabzeile input[type=checkbox]{width:15px;height:15px;accent-color:var(--ak)}
+.drow .dnote{grid-column:1/-1;font-size:11px;color:var(--mut)}
 #kernfehlt{display:none;margin:14px 18px;background:var(--rot-bg);color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
 @media (max-width:760px){.rail{width:180px}}
 </style>
@@ -124,9 +133,12 @@ input,select{font-family:inherit;color:var(--ink)}
       <a href="index.html">↗ Adressbuch und Kündigungen (klassisch)</a>
       <select id="ansichtSel" aria-label="Ansicht wählen">
         <option value="werkbank">Ansicht: Werkbank</option>
+        <option value="home">Home öffnen</option>
+        <option value="pipeline">Pipeline öffnen</option>
+        <option value="dokument">Dokument-Studio öffnen</option>
+        <option value="assistent">Assistent öffnen</option>
+        <option value="copilot">Copilot öffnen</option>
         <option value="klassisch">Klassisch öffnen</option>
-        <option value="pipeline" disabled>Pipeline (bald)</option>
-        <option value="home" disabled>Home (bald)</option>
       </select>
     </div>
   </aside>
@@ -183,6 +195,7 @@ if(!hatKern) $('kernfehlt').style.display = 'block';
 
 let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'', policies:[] };
 let kFilterTxt = '';
+let openDetail = null;
 
 function esc(s){
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -276,7 +289,7 @@ function geldZelle(p, side){
           '<option value="' + k + '"' + (z === k ? ' selected' : '') + '>' + {monatlich:'mtl',vierteljaehrlich:'vj',halbjaehrlich:'hj',jaehrlich:'jhrl'}[k] + '</option>').join('') +
       '</select>' +
     '</div>' +
-    '<div class="sub">' + (a != null ? '= ' + BVK.fmtNum(a) + ' €/J' : (side === 'rv' ? 'kein Angebot' : '')) + '</div>';
+    '<div class="sub">' + (a != null ? '= ' + BVK.fmtNum(a) + ' €/J' + (side === 'rv' && p.rabattApply && p.rabatt > 0 ? ' · inkl. −' + p.rabatt + '%' : '') : (side === 'rv' ? 'kein Angebot' : '')) + '</div>';
   const inp = wrap.querySelector('input');
   const sel = wrap.querySelector('select');
   inp.addEventListener('change', () => {
@@ -361,9 +374,14 @@ function renderRows(){
     const cA = document.createElement('div'); cA.className = 'tc';
     const ra = document.createElement('div'); ra.className = 'racts';
     ra.innerHTML =
+      '<button data-a="det" title="Details (Leistungen, Nachlass, Beitragsstand)">' + (openDetail === p.id ? '▾' : '▸') + '</button>' +
       '<button data-a="dup" title="Duplizieren">⧉</button>' +
       '<a href="index.html" data-a="k" title="Details und Kündigung in der klassischen Ansicht">↗</a>' +
       '<button data-a="del" title="Löschen">✕</button>';
+    ra.querySelector('[data-a="det"]').addEventListener('click', () => {
+      openDetail = openDetail === p.id ? null : p.id;
+      renderRows();
+    });
     ra.querySelector('[data-a="dup"]').addEventListener('click', () => {
       const c = JSON.parse(JSON.stringify(p));
       c.id = 'p' + Date.now() + Math.random().toString(36).slice(2,6);
@@ -382,7 +400,102 @@ function renderRows(){
 
     row.append(cSp, cGes, cVs, cAb, cF, cR, cD, cA);
     wrap.appendChild(row);
+    if(openDetail === p.id) wrap.appendChild(detailZeile(p));
   });
+}
+function feld(labelTxt, el){
+  const w = document.createElement('div');
+  const l = document.createElement('label');
+  l.textContent = labelTxt;
+  w.append(l, el);
+  return w;
+}
+function detailZeile(p){
+  const d = document.createElement('div');
+  d.className = 'drow';
+
+  const taF = document.createElement('textarea');
+  taF.value = p.leistF || '';
+  taF.placeholder = 'z. B. Versicherungssumme 85.000 €\nFahrrad 5.000 €\nSB 150 €';
+  taF.addEventListener('change', () => upd(p, 'leistF', taF.value));
+  d.appendChild(feld('LEISTUNGEN — BISHERIGER VERTRAG (eine Angabe pro Zeile)', taF));
+
+  const taR = document.createElement('textarea');
+  taR.value = p.leistRV || '';
+  taR.placeholder = 'z. B. unbegrenzte Versicherungssumme\nElementar eingeschlossen';
+  taR.addEventListener('change', () => upd(p, 'leistRV', taR.value));
+  d.appendChild(feld('LEISTUNGEN — R+V', taR));
+
+  const drei = document.createElement('div');
+  drei.className = 'drei';
+  const pIn = document.createElement('input');
+  pIn.type = 'text'; pIn.value = p.personen || ''; pIn.placeholder = 'z. B. Familie / VN, VP';
+  pIn.addEventListener('change', () => upd(p, 'personen', pIn.value.trim()));
+  drei.appendChild(feld('PERSONEN / OBJEKT', pIn));
+  if(p.sparte === 'kfz'){
+    const kIn = document.createElement('input');
+    kIn.type = 'text'; kIn.value = p.kennzeichen || ''; kIn.placeholder = 'AB-CD 123';
+    kIn.addEventListener('change', () => { upd(p, 'kennzeichen', kIn.value.trim()); });
+    drei.appendChild(feld('KENNZEICHEN', kIn));
+  } else if(p.sparte === 'so'){
+    const lIn = document.createElement('input');
+    lIn.type = 'text'; lIn.value = p.label || ''; lIn.placeholder = 'Bezeichnung, z. B. Schutzbrief';
+    lIn.addEventListener('change', () => { upd(p, 'label', lIn.value.trim()); renderRows(); });
+    drei.appendChild(feld('BEZEICHNUNG', lIn));
+  }
+  const jSel = document.createElement('select');
+  const y = new Date().getFullYear();
+  for(let i = 0; i <= 8; i++){
+    const o = document.createElement('option');
+    o.value = String(y - i);
+    o.textContent = i === 0 ? (y + ' (aktuell)') : String(y - i);
+    jSel.appendChild(o);
+  }
+  const jv = String(p.beitragsjahrF || y);
+  if(![...jSel.options].some(o => o.value === jv)){
+    const o = document.createElement('option'); o.value = jv; o.textContent = jv; jSel.appendChild(o);
+  }
+  jSel.value = jv;
+  jSel.addEventListener('change', () => { upd(p, 'beitragsjahrF', parseInt(jSel.value, 10) || null); renderRows(); });
+  drei.appendChild(feld('BEITRAGSSTAND (JAHR)', jSel));
+  d.appendChild(drei);
+
+  const rz = document.createElement('div');
+  rz.className = 'rabzeile';
+  rz.innerHTML = '<span>R+V-Nachlass intern:</span>';
+  const rIn = document.createElement('input');
+  rIn.type = 'text'; rIn.inputMode = 'decimal';
+  rIn.value = p.rabatt != null ? String(p.rabatt).replace('.', ',') : '';
+  rIn.placeholder = '0';
+  const rCb = document.createElement('input');
+  rCb.type = 'checkbox'; rCb.checked = !!p.rabattApply;
+  const rLb = document.createElement('span');
+  const rEff = document.createElement('span');
+  function rHint(){
+    const eff = BVK.rvEffective(p);
+    rEff.textContent = (p.rabattApply && p.rabatt > 0 && eff != null)
+      ? '→ effektiv ' + BVK.fmtNum(eff) + ' € ' + BVK.ZW[p.zwRV].l + ' (Kundendokumente bleiben ohne Rabatt-Spuren)'
+      : '';
+  }
+  rIn.addEventListener('change', () => {
+    const v = BVK.parseEuro(rIn.value);
+    p.rabatt = (v != null && v > 0) ? Math.min(v, 100) : null;
+    speichern(); rHint(); renderRows(); renderSummen(); renderKunden();
+  });
+  rCb.addEventListener('change', () => {
+    p.rabattApply = rCb.checked;
+    speichern(); rHint(); renderRows(); renderSummen(); renderKunden();
+  });
+  rLb.textContent = '% einrechnen';
+  rz.append(rIn, document.createTextNode('%'), rCb, rLb, rEff);
+  rHint();
+  d.appendChild(rz);
+
+  const note = document.createElement('div');
+  note.className = 'dnote';
+  note.innerHTML = 'Alle Details fließen in Word und PDF ein · Kündigung für diesen Vertrag über ↗ in der klassischen Ansicht';
+  d.appendChild(note);
+  return d;
 }
 function renderSummen(){
   const t = BVK.totals(state);
@@ -471,15 +584,30 @@ $('lnkKlassisch').addEventListener('click', () => speichern());
 $('ansichtSel').addEventListener('change', e => {
   const v = e.target.value;
   e.target.value = 'werkbank';
-  if(v === 'klassisch'){ speichern(); try{ localStorage.setItem('bv_ansicht', 'klassisch'); }catch(err){} location.href = 'index.html'; }
-});
-window.addEventListener('storage', e => {
-  if(hatKern && (e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1')){
-    BVK.reload();
-    state = BVK.ensureStateShape(BVK.aktiverState());
-    renderAll();
+  const ZIELE = { klassisch:'index.html', home:'home.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', copilot:'copilot.html' };
+  if(ZIELE[v]){
+    speichern();
+    try{ localStorage.setItem('bv_ansicht', v); }catch(err){}
+    location.href = ZIELE[v];
   }
 });
+function resync(){
+  if(!hatKern) return;
+  BVK.reload();
+  const fresh = BVK.ensureStateShape(BVK.aktiverState());
+  if(JSON.stringify(fresh) !== JSON.stringify(state)){
+    state = fresh;
+    renderAll();
+  } else {
+    renderKunden();
+  }
+}
+window.addEventListener('storage', e => {
+  if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync();
+});
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
 window.addEventListener('beforeunload', speichern);
 
 /* ---------- Start ---------- */

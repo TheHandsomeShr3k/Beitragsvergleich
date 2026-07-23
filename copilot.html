@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copilot · Bestandsvergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="kern.js"></script>
+<style>
+:root{--bg:#FAFAFB;--card:#fff;--line:#E3E3E8;--ink:#1C1F26;--mut:#8E929C;--mut2:#5A5E68;--ak:#274690;--ak-bg:#EAF0FB;--gruen:#1C7A4D;--rot:#B3372B;--mono:ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;height:100vh;display:flex;flex-direction:column}
+button{font-family:inherit;cursor:pointer}
+.kopf{background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.kopf b{font-size:13.5px}
+.kopf small{color:var(--mut);font-size:12px}
+.kopf select{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12px;background:#fff}
+.chat{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto}
+.me{align-self:flex-end;max-width:80%;background:#1C1F26;color:#fff;border-radius:14px 14px 4px 14px;padding:9px 13px}
+.bot{align-self:flex-start;max-width:88%;background:#F1F3F8;border-radius:14px 14px 14px 4px;padding:10px 14px;color:#3A3F4A}
+.karte{align-self:flex-start;max-width:92%;width:460px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 14px;box-shadow:0 2px 8px rgba(28,31,38,.05)}
+.karte .kz{display:flex;gap:8px;align-items:center}
+.karte .pk{font-size:10px;font-weight:700;background:var(--ak);color:#fff;border-radius:6px;padding:2px 7px}
+.karte b{font-size:13px}
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:8px;font-size:12px}
+.kgrid label{display:block;font-size:10px;color:var(--mut);letter-spacing:.05em;margin-bottom:1px}
+.kgrid input,.kgrid select{width:100%;border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:12px;background:#fff}
+.kgeld{display:flex;gap:6px}
+.kgeld input{flex:1;text-align:right;font-family:var(--mono)}
+.kgeld select{width:110px}
+.kakt{display:flex;gap:7px;margin-top:10px}
+.kakt button{font-size:12px;font-weight:600;border-radius:8px;padding:6px 13px;border:1px solid var(--line);background:#fff}
+.kakt button.ak{background:var(--ak);border-color:var(--ak);color:#fff}
+.vorschl{display:flex;gap:7px;flex-wrap:wrap;align-self:flex-start}
+.vorschl button{font-size:12px;border:1px solid #D8DCE6;border-radius:99px;padding:6px 13px;background:#fff;color:var(--mut2)}
+.vorschl button:hover{color:var(--ak);border-color:var(--ak)}
+.fuss{background:#fff;border-top:1px solid var(--line);padding:12px 16px}
+.eingabe{max-width:760px;margin:0 auto;display:flex;gap:9px;align-items:center;border:1.5px solid var(--ak);border-radius:14px;padding:8px 12px;box-shadow:0 0 0 4px rgba(39,70,144,.08)}
+.eingabe input{flex:1;border:none;font-size:13.5px;font-family:inherit;min-width:0}
+.eingabe input:focus{outline:none}
+.eingabe button{width:32px;height:32px;border-radius:9px;background:var(--ak);color:#fff;border:none;font-size:15px;flex:none}
+.fusshint{max-width:760px;margin:6px auto 0;font-size:10.5px;color:var(--mut)}
+#kernfehlt{display:none;margin:12px 16px;background:#F6E5E1;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
+#toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);background:#1C1F26;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="kopf">
+  <span><b id="kTitel">Copilot</b> <small id="kSub"></small></span>
+  <select id="ansichtSel" aria-label="Ansicht wählen">
+    <option value="copilot">Ansicht: Copilot</option>
+    <option value="home">Home öffnen</option>
+    <option value="werkbank">Werkbank öffnen</option>
+    <option value="pipeline">Pipeline öffnen</option>
+    <option value="dokument">Dokument-Studio öffnen</option>
+    <option value="assistent">Assistent öffnen</option>
+    <option value="klassisch">Klassisch öffnen</option>
+  </select>
+</div>
+<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+
+<div class="chat" id="chat"></div>
+
+<div class="fuss">
+  <div class="eingabe">
+    <input id="ein" type="text" placeholder="Vertrag eintippen — z. B. „phv allianz 737373, 60 € jährlich, ablauf 23.10.26“" autocomplete="off">
+    <button id="senden" aria-label="Senden">↑</button>
+  </div>
+  <div class="fusshint">Erkannt werden Sparte, Gesellschaft (aus dem 251er-Verzeichnis), Versicherungsnummer, Beitrag mit Zahlweise und Ablaufdatum — alles vor dem Übernehmen korrigierbar. Läuft komplett lokal im Browser.</div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const hatKern = !!window.BVK;
+if(!hatKern) $('kernfehlt').style.display = 'block';
+try{ localStorage.setItem('bv_ansicht', 'copilot'); }catch(e){}
+
+let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'', policies:[] };
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m){
+  const t = $('toast');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function speichern(){ if(hatKern) BVK.speichern(BVK.aktivId(), state); }
+function kopfSub(){
+  const t = hatKern ? BVK.totals(state) : {};
+  $('kTitel').textContent = 'Copilot · ' + ((state.kunde || '').trim() || 'Unbenannter Kunde');
+  $('kSub').textContent = '· ' + state.policies.length + ' Verträge' + (t.save != null ? ' · Ersparnis ' + BVK.fmtNum(Math.abs(t.save)) + ' €/J' : '');
+}
+
+/* ---------- Parser (regelbasiert, lokal) ---------- */
+const KURZMARKEN = /^(vhv|axa|huk|huk24|ergo|arag|lvm|wgv|dkv|devk|r\+v)$/i;
+const SPARTENWORT = /^(privathaftpflicht|haftpflicht|phv|wohngeb\w*|geb[äa]ude|wg|hausrat|hr|rechtsschutz|rs|unfall|uv|berufsunf\w*|bu|glas|kfz|auto|pkw|kraftfahr\w*|krankenzusatz|zahnzusatz|kzv|versicherung\w*|ablauf|beitrag|j[äa]hrlich|monatlich|halbj\w*|viertelj\w*)$/i;
+function gesKandidat(cand){
+  if(!hatKern) return null;
+  if(/\d/.test(cand)) return null;
+  if(cand.split(/\s+/).every(w => SPARTENWORT.test(w))) return null;
+  const c = cand.trim();
+  if(c.length < 2) return null;
+  if(c.length < 4 && !KURZMARKEN.test(c)) return null;
+  const v = BVK.lookupVersicherer(c);
+  if(!v) return null;
+  const cn = BVK.normNameV(c);
+  if(!cn) return null;
+  const worte = BVK.normNameV(v.n).split(' ');
+  return worte.some(w => w.startsWith(cn.split(' ')[0])) ? v : null;
+}
+function parseText(text){
+  const t = ' ' + text.toLowerCase() + ' ';
+  const sMap = [
+    [/privathaftpflicht|haftpflicht|\bphv\b/, 'phv'],
+    [/wohngeb|geb[äa]ude|\bwg\b/, 'wg'],
+    [/hausrat|\bhr\b/, 'hr'],
+    [/rechtsschutz|\brs\b/, 'rs'],
+    [/berufsunf|\bbu\b/, 'bu'],
+    [/unfall|\buv\b/, 'uv'],
+    [/glas\b/, 'gl'],
+    [/kfz|kraftfahr|auto\b|pkw/, 'kfz'],
+    [/krankenzusatz|zahnzusatz|\bkzv\b/, 'kzv']
+  ];
+  let sparte = 'so';
+  for(const [re, id] of sMap){ if(re.test(t)){ sparte = id; break; } }
+
+  let zw = 'jaehrlich';
+  if(/monatlich|\bmtl\b/.test(t)) zw = 'monatlich';
+  else if(/viertelj|\bvj\b|quartal/.test(t)) zw = 'vierteljaehrlich';
+  else if(/halbj|\bhj\b/.test(t)) zw = 'halbjaehrlich';
+
+  let beitrag = null, beitragTok = '';
+  const mB = /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:€|eur\b)/.exec(t);
+  if(mB){ beitrag = BVK.parseEuro(mB[1]); beitragTok = mB[1]; }
+
+  let ablauf = '', ablaufTok = '';
+  const mD = /(\d{1,2})\.(\d{1,2})\.(\d{2,4})/.exec(t);
+  if(mD){
+    let y = +mD[3];
+    if(y < 100) y += 2000;
+    ablauf = y + '-' + String(mD[2]).padStart(2,'0') + '-' + String(mD[1]).padStart(2,'0');
+    ablaufTok = mD[0];
+  }
+
+  let vsnr = '';
+  for(const tok of text.split(/[\s,;]+/)){
+    const c = tok.replace(/[€]/g,'');
+    if(!/\d/.test(c)) continue;
+    if(c.replace(/\D/g,'').length < 4) continue;
+    if(ablaufTok && c.includes(ablaufTok)) continue;
+    if(beitragTok && c.replace(',', '.').includes(beitragTok.replace(',', '.'))) continue;
+    vsnr = c;
+    break;
+  }
+
+  let ges = '';
+  const worte = text.split(/[\s,;]+/).filter(Boolean);
+  outer:
+  for(let n = 3; n >= 1; n--){
+    for(let i = 0; i + n <= worte.length; i++){
+      const v = gesKandidat(worte.slice(i, i + n).join(' '));
+      if(v){ ges = v.n; break outer; }
+    }
+  }
+  return { sparte, gesellschaft: ges, vsnr, ablauf, beitrag, zw };
+}
+
+/* ---------- Chat ---------- */
+const chat = $('chat');
+function scrollEnde(){ chat.scrollTop = chat.scrollHeight; }
+function addMe(text){
+  const d = document.createElement('div');
+  d.className = 'me';
+  d.textContent = text;
+  chat.appendChild(d);
+  scrollEnde();
+}
+function addBot(html){
+  const d = document.createElement('div');
+  d.className = 'bot';
+  d.innerHTML = html;
+  chat.appendChild(d);
+  scrollEnde();
+  return d;
+}
+function addVorschlaege(){
+  const alt = chat.querySelector('.vorschl');
+  if(alt) alt.remove();
+  const w = document.createElement('div');
+  w.className = 'vorschl';
+  const mk = (txt, fn) => {
+    const b = document.createElement('button');
+    b.textContent = txt;
+    b.addEventListener('click', fn);
+    w.appendChild(b);
+  };
+  mk('Word-Vergleich erstellen', async () => {
+    if(!state.policies.length){ toast('Noch keine Verträge.'); return; }
+    try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
+    catch(e){ toast('Export fehlgeschlagen — Internet nötig.'); }
+  });
+  mk('Werkbank öffnen', () => { speichern(); location.href = 'werkbank.html'; });
+  mk('Kündigungen (klassisch)', () => { speichern(); location.href = 'index.html'; });
+  chat.appendChild(w);
+  scrollEnde();
+}
+function addKarte(d0){
+  const s = BVK.sparteOf({sparte: d0.sparte});
+  const k = document.createElement('div');
+  k.className = 'karte';
+  k.innerHTML =
+    '<div class="kz"><span class="pk">' + s.k + '</span><b>' + esc(s.full) + '</b></div>' +
+    '<div class="kgrid">' +
+      '<div><label>SPARTE</label><select data-f="sparte">' + BVK.SPARTEN.map(x => '<option value="' + x.id + '"' + (x.id === d0.sparte ? ' selected' : '') + '>' + x.name + '</option>').join('') + '</select></div>' +
+      '<div><label>GESELLSCHAFT</label><input data-f="gesellschaft" value="' + esc(d0.gesellschaft) + '" placeholder="—"></div>' +
+      '<div><label>VSNR</label><input data-f="vsnr" value="' + esc(d0.vsnr) + '" placeholder="—" style="font-family:var(--mono)"></div>' +
+      '<div><label>ABLAUF</label><input data-f="ablauf" type="date" value="' + esc(d0.ablauf) + '"></div>' +
+      '<div style="grid-column:1/-1"><label>BEITRAG BISHER</label><div class="kgeld">' +
+        '<input data-f="beitrag" value="' + (d0.beitrag != null ? esc(BVK.fmtNum(d0.beitrag)) : '') + '" placeholder="—" inputmode="decimal">' +
+        '<select data-f="zw">' + Object.keys(BVK.ZW).map(z => '<option value="' + z + '"' + (z === d0.zw ? ' selected' : '') + '>' + BVK.ZW[z].l + '</option>').join('') + '</select>' +
+      '</div></div>' +
+    '</div>' +
+    '<div class="kakt"><button class="ak" data-a="ok">Übernehmen</button><button data-a="wb">In Werkbank verfeinern</button><button data-a="nix">Verwerfen</button></div>';
+  const get = f => k.querySelector('[data-f="' + f + '"]').value;
+  k.querySelector('[data-a="ok"]').addEventListener('click', () => {
+    const p = {
+      id: 'p' + Date.now() + Math.random().toString(36).slice(2,6), created: Date.now(),
+      sparte: get('sparte'), label: get('sparte') === 'so' ? 'Sonstiger Vertrag' : '',
+      gesellschaft: get('gesellschaft').trim(), vsnr: get('vsnr').trim(), ablauf: get('ablauf'),
+      personen: '', kennzeichen: '', leistF: '', beitragF: BVK.parseEuro(get('beitrag')),
+      zwF: get('zw'), beitragsjahrF: new Date().getFullYear(),
+      rv: false, leistRV: '', beitragRV: null, zwRV: 'jaehrlich', rabatt: null, rabattApply: false
+    };
+    state.policies.push(p);
+    speichern();
+    kopfSub();
+    k.querySelector('.kakt').innerHTML = '<span style="color:var(--gruen);font-weight:600;font-size:12px">✓ Übernommen</span>';
+    let hinweis = 'Übernommen — Vertrag ' + state.policies.length + ' für ' + esc((state.kunde || '').trim() || 'den aktiven Kunden') + '.';
+    const f = BVK.fristDate(p);
+    if(f){
+      const tage = Math.round((f - new Date()) / 864e5);
+      if(tage >= 0 && tage <= 90) hinweis += ' <b>Hinweis:</b> Kündigungsfrist läuft in ' + tage + ' Tagen ab (' + BVK.fmtDate(p.ablauf) + ' Ablauf).';
+    }
+    addBot(hinweis + ' Leistungen und R+V-Angebot ergänzt du am schnellsten in der Werkbank.');
+    addVorschlaege();
+  });
+  k.querySelector('[data-a="wb"]').addEventListener('click', () => { speichern(); location.href = 'werkbank.html'; });
+  k.querySelector('[data-a="nix"]').addEventListener('click', () => { k.remove(); });
+  chat.appendChild(k);
+  scrollEnde();
+}
+function verarbeite(text){
+  addMe(text);
+  if(!hatKern){ addBot('Kern nicht geladen — bitte kern.js mit hochladen.'); return; }
+  const t = text.toLowerCase();
+  if(/^(word|export|dokument)/.test(t)){
+    BVK.exportVergleichDocx(state).then(() => toast('Word-Datei erstellt.')).catch(() => toast('Export fehlgeschlagen.'));
+    return;
+  }
+  if(/^kunde[:\s]/.test(t)){
+    const name = text.slice(6).trim();
+    if(name){
+      state.kunde = name;
+      speichern(); kopfSub();
+      addBot('Kunde heißt jetzt „' + esc(name) + '".');
+    }
+    return;
+  }
+  const d = parseText(text);
+  const erkannt = [d.gesellschaft && 'Gesellschaft', d.vsnr && 'VSNR', d.beitrag != null && 'Beitrag', d.ablauf && 'Ablauf'].filter(Boolean);
+  addBot('Erkannt und strukturiert' + (erkannt.length ? ' (' + erkannt.join(', ') + ')' : '') + ' — bitte prüfen:');
+  addKarte(d);
+}
+
+$('senden').addEventListener('click', () => {
+  const v = $('ein').value.trim();
+  if(!v) return;
+  $('ein').value = '';
+  verarbeite(v);
+});
+$('ein').addEventListener('keydown', e => { if(e.key === 'Enter') $('senden').click(); });
+$('ansichtSel').addEventListener('change', e => {
+  const v = e.target.value;
+  e.target.value = 'copilot';
+  const Z = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', dokument:'dokument.html', assistent:'assistent.html', klassisch:'index.html' };
+  if(Z[v]){ speichern(); try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
+});
+function resync(){
+  if(!hatKern) return;
+  BVK.reload();
+  const fresh = BVK.ensureStateShape(BVK.aktiverState());
+  if(JSON.stringify(fresh) !== JSON.stringify(state)){ state = fresh; kopfSub(); }
+}
+window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
+
+kopfSub();
+addBot('Hallo! Tippe einen Vertrag in einem Satz — ich baue daraus die strukturierte Karte. Mit <b>„kunde: Familie Meier"</b> benennst du den aktiven Kunden um, mit <b>„word"</b> startest du den Export.');
+addVorschlaege();
+let prefill = '';
+try{ prefill = sessionStorage.getItem('bv_copilot_prefill') || ''; sessionStorage.removeItem('bv_copilot_prefill'); }catch(e){}
+if(prefill){ verarbeite(prefill); }
+</script>
+</body>
+</html>

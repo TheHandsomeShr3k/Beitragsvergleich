@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dokument-Studio · Bestandsvergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="kern.js"></script>
+<style>
+:root{--bg:#EEF0F3;--panel:#F8F9FB;--card:#fff;--line:#E2E5EA;--ink:#20242C;--mut:#8A90A0;--ak:#1A5FD0;--gruen:#177245;--rot:#A62B22;--mono:ui-monospace,'SF Mono',Menlo,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;height:100vh;display:flex;flex-direction:column}
+button{font-family:inherit;cursor:pointer}
+.top{background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.top b{font-size:13.5px}
+.top .r{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:500;color:var(--ink)}
+.btn.ak{background:var(--ak);border-color:var(--ak);color:#fff;font-weight:600}
+.top select{border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:12px;background:#fff}
+.live{font-size:11px;color:var(--gruen);background:#E4F2EA;border-radius:99px;padding:3px 10px;font-weight:600}
+.split{flex:1;display:grid;grid-template-columns:minmax(320px,.85fr) 1.15fr;min-height:0}
+.links{border-right:1px solid var(--line);background:var(--panel);padding:12px 14px;overflow:auto}
+.sec{font-size:10.5px;letter-spacing:.08em;color:var(--mut);margin:10px 0 6px}
+.sec:first-child{margin-top:0}
+.f{margin-bottom:7px}
+.f label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff;font-family:inherit}
+.f textarea{min-height:54px;resize:vertical}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--ak);outline:none;box-shadow:0 0 0 3px rgba(26,95,208,.12)}
+.zwei{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.geld{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:8px}
+.vliste{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.vchip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:5px 11px;font-size:11.5px;font-weight:600;color:#5a6272;cursor:pointer}
+.vchip.on{border-color:var(--ak);background:#EAF1FC;color:var(--ak)}
+.vchip.neu{color:var(--ak)}
+.rechts{overflow:auto;padding:16px;display:flex;justify-content:center;align-items:flex-start}
+.blatt{width:min(680px,96%);background:#fff;border-radius:4px;box-shadow:0 14px 34px rgba(20,30,60,.16);padding:26px 30px;color:#111;font-size:11px;line-height:1.45}
+.blatt h1{margin:0;font-size:17px;letter-spacing:.12em}
+.blatt .kd{font-size:12.5px;font-weight:700;margin-top:2px}
+.blatt .meta{font-size:9.5px;color:#5B6B80;margin-bottom:9px}
+.blatt table{width:100%;border-collapse:collapse;font-size:9.5px}
+.blatt td,.blatt th{border:.75pt solid #7A8BA0;padding:4px 6px;vertical-align:top;text-align:left}
+.blatt th.v{background:#EDF2F9;color:#42536B;width:28%}
+.blatt th.b{background:#0E4DA4;color:#fff}
+.blatt .m{font-style:italic}
+.blatt .pr{font-weight:700}
+.blatt .an{color:#42536B;font-size:8.5px}
+.blatt .tot td{background:#EDF2F9;font-weight:700}
+.blatt .df td{font-weight:700}
+.blatt .df .gr{color:#177245}
+.blatt .df .rd{color:#A62B22}
+#kernfehlt{display:none;margin:12px 16px;background:#F6E5E1;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#20242C;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+#toast.show{opacity:1}
+@media print{
+  body{height:auto;background:#fff}
+  .top,.links,#toast,#kernfehlt{display:none !important}
+  .split{display:block}
+  .rechts{padding:0;overflow:visible}
+  .blatt{width:100%;box-shadow:none;border-radius:0;padding:0}
+  @page{size:A4;margin:13mm}
+}
+@media (max-width:820px){.split{grid-template-columns:1fr;grid-template-rows:auto auto}.links{border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="top">
+  <b id="titel">Dokument-Studio</b>
+  <div class="r">
+    <span class="live">● Live synchron</span>
+    <button class="btn" id="btnPrint">Drucken / PDF</button>
+    <button class="btn ak" id="btnWord">Word herunterladen</button>
+    <select id="ansichtSel" aria-label="Ansicht wählen">
+      <option value="dokument">Ansicht: Dokument-Studio</option>
+      <option value="home">Home öffnen</option>
+      <option value="werkbank">Werkbank öffnen</option>
+      <option value="pipeline">Pipeline öffnen</option>
+      <option value="assistent">Assistent öffnen</option>
+      <option value="copilot">Copilot öffnen</option>
+      <option value="klassisch">Klassisch öffnen</option>
+    </select>
+  </div>
+</div>
+<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+
+<div class="split">
+  <div class="links">
+    <div class="sec">DOKUMENTKOPF</div>
+    <div class="zwei">
+      <div class="f"><label for="d_kunde">Kunde</label><input id="d_kunde" type="text" placeholder="Familie Mustermann"></div>
+      <div class="f"><label for="d_spalte">Spaltentitel Fremdbestand</label><input id="d_spalte" type="text"></div>
+    </div>
+    <div class="sec">VERTRAG WÄHLEN</div>
+    <div class="vliste" id="vListe"></div>
+    <div id="editor"></div>
+  </div>
+  <div class="rechts"><div class="blatt" id="blatt"></div></div>
+</div>
+<div id="toast" role="status"></div>
+<datalist id="gesListe"></datalist>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const hatKern = !!window.BVK;
+if(!hatKern) $('kernfehlt').style.display = 'block';
+try{ localStorage.setItem('bv_ansicht', 'dokument'); }catch(e){}
+
+let state = hatKern ? BVK.ensureStateShape(BVK.aktiverState()) : { kunde:'', spalte:'Anderer Versicherer', policies:[] };
+let selId = state.policies.length ? state.policies[0].id : null;
+
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m){
+  const t = $('toast');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function speichern(){ if(hatKern) BVK.speichern(BVK.aktivId(), state); }
+function sortiert(){ return [...state.policies].sort((a, b) => (a.created || 0) - (b.created || 0)); }
+function sel(){ return state.policies.find(p => p.id === selId) || null; }
+
+/* ---------- Vorschau ---------- */
+function zelle(p, side){
+  const leist = side === 'rv' ? p.leistRV : p.leistF;
+  const b = side === 'rv' ? BVK.rvEffective(p) : p.beitragF;
+  const z = side === 'rv' ? p.zwRV : p.zwF;
+  const alt = side !== 'rv' ? BVK.beitragsAlt(p) : null;
+  let h = '';
+  if(leist) h += leist.split(/\r?\n/).filter(x => x.trim()).map(l => '<div>' + esc(l) + '</div>').join('');
+  if(b != null){
+    h += '<div class="pr">' + BVK.fmtNum(b) + ' € ' + BVK.ZW[z].l + (alt ? ' <span class="an">(Stand ' + alt + ')</span>' : '') + '</div>';
+    if(z !== 'jaehrlich') h += '<div class="an">≙ ' + BVK.fmtNum(b * BVK.ZW[z].f) + ' € / Jahr</div>';
+  } else if(side === 'rv'){
+    h += '<div class="pr">0,00 €</div>';
+  }
+  return h;
+}
+function renderBlatt(){
+  const arr = sortiert();
+  const fS = arr.reduce((s, p) => s + (BVK.annual(p, 'f') || 0), 0);
+  const rS = arr.reduce((s, p) => s + (BVK.annual(p, 'rv') || 0), 0);
+  const d = fS - rS;
+  let rows = '';
+  arr.forEach(p => {
+    let meta = '<div class="m" style="font-weight:700">' + esc(BVK.displayName(p)) + '</div>';
+    if(p.kennzeichen) meta += '<div class="m">' + esc(p.kennzeichen) + '</div>';
+    if(p.gesellschaft) meta += '<div class="m">' + esc(p.gesellschaft) + '</div>';
+    if(p.vsnr) meta += '<div class="m">' + esc(p.vsnr) + '</div>';
+    if(p.ablauf) meta += '<div class="m">' + esc(BVK.fmtDate(p.ablauf)) + '</div>';
+    if(p.personen) meta += '<div class="m">' + esc(p.personen) + '</div>';
+    rows += '<tr' + (p.id === selId ? ' style="background:#FFF9E6"' : '') + '><td>' + meta + '</td><td>' + zelle(p, 'f') + '</td><td>' + zelle(p, 'rv') + '</td></tr>';
+  });
+  $('blatt').innerHTML =
+    '<h1>BEITRÄGE</h1>' +
+    (state.kunde ? '<div class="kd">' + esc(state.kunde) + '</div>' : '') +
+    '<div class="meta">Stand ' + BVK.todayStr() + ' · ' + arr.length + ' Verträge</div>' +
+    '<table><tr><th class="v">Vertrag</th><th class="b">' + esc(state.spalte || 'Anderer Versicherer') + '</th><th class="b">R+V</th></tr>' +
+    rows +
+    '<tr class="tot"><td>Gesamtsumme / Jahr</td><td>' + BVK.fmtNum(fS) + ' €</td><td>' + BVK.fmtNum(rS) + ' €</td></tr>' +
+    '<tr class="df"><td colspan="2">Differenz / Jahr (bisher − R+V)</td><td class="' + (d >= 0 ? 'gr' : 'rd') + '">' + (d < 0 ? '− ' : '') + BVK.fmtNum(Math.abs(d)) + ' €' + (d < 0 ? ' Mehrbeitrag' : '') + '</td></tr>' +
+    '</table>' +
+    '<div class="an" style="margin-top:8px;text-align:right">Vorschau — Word-Export ist pixelgenau formatiert</div>';
+}
+
+/* ---------- Editor ---------- */
+function f(labelTxt, el){
+  const w = document.createElement('div');
+  w.className = 'f';
+  const l = document.createElement('label');
+  l.textContent = labelTxt;
+  w.append(l, el);
+  return w;
+}
+function inp(type, val, ph, on){
+  const i = document.createElement('input');
+  i.type = type; i.value = val ?? ''; if(ph) i.placeholder = ph;
+  i.addEventListener('input', () => { on(i.value); speichern(); renderBlatt(); });
+  return i;
+}
+function zwSel(val, on){
+  const s = document.createElement('select');
+  Object.keys(BVK.ZW).forEach(k => {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = BVK.ZW[k].l;
+    if(k === val) o.selected = true;
+    s.appendChild(o);
+  });
+  s.addEventListener('change', () => { on(s.value); speichern(); renderBlatt(); });
+  return s;
+}
+function renderVListe(){
+  const w = $('vListe');
+  w.innerHTML = '';
+  sortiert().forEach(p => {
+    const c = document.createElement('span');
+    c.className = 'vchip' + (p.id === selId ? ' on' : '');
+    c.textContent = BVK.sparteOf(p).k + ' · ' + (p.gesellschaft || '—');
+    c.addEventListener('click', () => { selId = p.id; renderVListe(); renderEditor(); renderBlatt(); });
+    w.appendChild(c);
+  });
+  const neu = document.createElement('span');
+  neu.className = 'vchip neu';
+  neu.textContent = '+ Vertrag';
+  neu.addEventListener('click', () => {
+    const p = { id:'p' + Date.now() + Math.random().toString(36).slice(2,6), created:Date.now(), sparte:'phv', label:'', gesellschaft:'', vsnr:'', ablauf:'', personen:'', kennzeichen:'', leistF:'', beitragF:null, zwF:'jaehrlich', beitragsjahrF:new Date().getFullYear(), rv:false, leistRV:'', beitragRV:null, zwRV:'jaehrlich', rabatt:null, rabattApply:false };
+    state.policies.push(p);
+    selId = p.id;
+    speichern(); renderVListe(); renderEditor(); renderBlatt();
+  });
+  w.appendChild(neu);
+}
+function renderEditor(){
+  const ed = $('editor');
+  ed.innerHTML = '';
+  const p = sel();
+  if(!p){ ed.innerHTML = '<div style="color:var(--mut);font-size:12.5px">Links „+ Vertrag" anlegen oder oben einen wählen.</div>'; return; }
+
+  const spS = document.createElement('select');
+  BVK.SPARTEN.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.full;
+    if(p.sparte === s.id) o.selected = true;
+    spS.appendChild(o);
+  });
+  spS.addEventListener('change', () => { p.sparte = spS.value; speichern(); renderVListe(); renderEditor(); renderBlatt(); });
+
+  const secV = document.createElement('div'); secV.className = 'sec'; secV.textContent = 'VERTRAGSDATEN';
+  ed.appendChild(secV);
+  ed.appendChild(f('Sparte', spS));
+  const gIn = inp('text', p.gesellschaft, 'Gesellschaft', v => p.gesellschaft = v.trim());
+  gIn.setAttribute('list', 'gesListe');
+  const z1 = document.createElement('div'); z1.className = 'zwei';
+  z1.append(f('Gesellschaft (bisher)', gIn), f('Versicherungsnummer', inp('text', p.vsnr, '123456789/U', v => p.vsnr = v.trim())));
+  ed.appendChild(z1);
+  const z2 = document.createElement('div'); z2.className = 'zwei';
+  z2.append(f('Ablauf', inp('date', p.ablauf, '', v => p.ablauf = v)), f('Personen / Objekt', inp('text', p.personen, 'z. B. VN, VP', v => p.personen = v.trim())));
+  ed.appendChild(z2);
+  if(p.sparte === 'kfz') ed.appendChild(f('Kennzeichen', inp('text', p.kennzeichen, 'AB-CD 123', v => p.kennzeichen = v.trim())));
+  if(p.sparte === 'so') ed.appendChild(f('Bezeichnung', inp('text', p.label, 'z. B. Schutzbrief', v => { p.label = v.trim(); renderVListe(); })));
+
+  const secF = document.createElement('div'); secF.className = 'sec'; secF.textContent = 'BISHERIGER VERTRAG';
+  ed.appendChild(secF);
+  const taF = document.createElement('textarea');
+  taF.value = p.leistF || '';
+  taF.placeholder = 'Leistungen — eine Angabe pro Zeile';
+  taF.addEventListener('input', () => { p.leistF = taF.value; speichern(); renderBlatt(); });
+  ed.appendChild(f('Leistungen', taF));
+  const g1 = document.createElement('div'); g1.className = 'geld';
+  const jS = document.createElement('select');
+  const y = new Date().getFullYear();
+  for(let i = 0; i <= 8; i++){ const o = document.createElement('option'); o.value = String(y - i); o.textContent = i === 0 ? y + ' (aktuell)' : String(y - i); jS.appendChild(o); }
+  jS.value = String(p.beitragsjahrF || y);
+  jS.addEventListener('change', () => { p.beitragsjahrF = parseInt(jS.value, 10) || null; speichern(); renderBlatt(); });
+  g1.append(
+    f('Beitrag (€)', inp('text', p.beitragF != null ? BVK.fmtNum(p.beitragF) : '', '89,90', v => p.beitragF = BVK.parseEuro(v))),
+    f('Zahlweise', zwSel(p.zwF, v => p.zwF = v)),
+    f('Beitragsstand', jS)
+  );
+  ed.appendChild(g1);
+
+  const secR = document.createElement('div'); secR.className = 'sec'; secR.textContent = 'R+V-ANGEBOT';
+  ed.appendChild(secR);
+  const taR = document.createElement('textarea');
+  taR.value = p.leistRV || '';
+  taR.placeholder = 'Leistungen R+V — eine Angabe pro Zeile';
+  taR.addEventListener('input', () => { p.leistRV = taR.value; speichern(); renderBlatt(); });
+  ed.appendChild(f('Leistungen', taR));
+  const g2 = document.createElement('div'); g2.className = 'zwei';
+  g2.append(
+    f('Beitrag (€)', inp('text', p.beitragRV != null ? BVK.fmtNum(p.beitragRV) : '', 'leer = 0,00 € im Dokument', v => { p.beitragRV = BVK.parseEuro(v); p.rv = p.beitragRV != null; })),
+    f('Zahlweise', zwSel(p.zwRV, v => p.zwRV = v))
+  );
+  ed.appendChild(g2);
+
+  const del = document.createElement('button');
+  del.className = 'btn';
+  del.style.marginTop = '6px';
+  del.textContent = 'Vertrag löschen';
+  del.addEventListener('click', () => {
+    if(confirm('Diesen Vertrag löschen?')){
+      state.policies = state.policies.filter(x => x.id !== p.id);
+      selId = state.policies.length ? sortiert()[0].id : null;
+      speichern(); renderVListe(); renderEditor(); renderBlatt();
+    }
+  });
+  ed.appendChild(del);
+}
+function renderKopf(){
+  $('d_kunde').value = state.kunde || '';
+  $('d_spalte').value = state.spalte || 'Anderer Versicherer';
+  $('titel').textContent = 'Dokument-Studio · ' + ((state.kunde || '').trim() || 'Unbenannter Kunde');
+}
+function renderAll(){ renderKopf(); renderVListe(); renderEditor(); renderBlatt(); }
+
+$('d_kunde').addEventListener('input', e => { state.kunde = e.target.value; speichern(); renderBlatt(); $('titel').textContent = 'Dokument-Studio · ' + (state.kunde.trim() || 'Unbenannter Kunde'); });
+$('d_spalte').addEventListener('input', e => { state.spalte = e.target.value; speichern(); renderBlatt(); });
+$('btnPrint').addEventListener('click', () => window.print());
+$('btnWord').addEventListener('click', async () => {
+  if(!hatKern) return;
+  if(!state.policies.length){ toast('Noch keine Verträge.'); return; }
+  try{ await BVK.exportVergleichDocx(state); toast('Word-Datei erstellt.'); }
+  catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
+});
+$('ansichtSel').addEventListener('change', e => {
+  const v = e.target.value;
+  e.target.value = 'dokument';
+  const Z = { home:'home.html', werkbank:'werkbank.html', pipeline:'pipeline.html', assistent:'assistent.html', copilot:'copilot.html', klassisch:'index.html' };
+  if(Z[v]){ speichern(); try{ localStorage.setItem('bv_ansicht', v); }catch(err){} location.href = Z[v]; }
+});
+function resync(){
+  if(!hatKern) return;
+  BVK.reload();
+  const fresh = BVK.ensureStateShape(BVK.aktiverState());
+  if(JSON.stringify(fresh) !== JSON.stringify(state)){
+    state = fresh;
+    if(!state.policies.some(p => p.id === selId)) selId = state.policies.length ? sortiert()[0].id : null;
+    renderAll();
+  }
+}
+window.addEventListener('storage', e => { if(e.key === 'bv_kunden_v1' || e.key === 'bv_kunde_aktiv_v1') resync(); });
+window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
+window.addEventListener('focus', resync);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
+window.addEventListener('beforeunload', speichern);
+
+if(hatKern){
+  const dl = $('gesListe');
+  [...new Set(Object.values(BVK.adressbuch()).map(v => v.n).concat(BVK.VERZEICHNIS.map(v => v.n)))]
+    .sort((a, b) => a.localeCompare(b, 'de'))
+    .forEach(n => { const o = document.createElement('option'); o.value = n; dl.appendChild(o); });
+}
+renderAll();
+</script>
+</body>
+</html>
