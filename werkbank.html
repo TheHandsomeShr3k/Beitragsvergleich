@@ -375,12 +375,29 @@ function renderRows(){
     const ra = document.createElement('div'); ra.className = 'racts';
     ra.innerHTML =
       '<button data-a="det" title="Details (Leistungen, Nachlass, Beitragsstand)">' + (openDetail === p.id ? '▾' : '▸') + '</button>' +
+      '<button data-a="ku" title="Kündigung erstellen (Word)">✉</button>' +
       '<button data-a="dup" title="Duplizieren">⧉</button>' +
       '<a href="index.html" data-a="k" title="Details und Kündigung in der klassischen Ansicht">↗</a>' +
       '<button data-a="del" title="Löschen">✕</button>';
     ra.querySelector('[data-a="det"]').addEventListener('click', () => {
       openDetail = openDetail === p.id ? null : p.id;
       renderRows();
+    });
+    ra.querySelector('[data-a="ku"]').addEventListener('click', () => {
+      BVK.kuendDialog({
+        policy: p,
+        kunde: state.kunde,
+        absender: state.absender,
+        kOrtWahl: state.kOrtWahl,
+        onExported: (d, statusSetzen) => {
+          state.absender = { name: d.name, strasse: d.strasse, ort: d.plzort };
+          state.kOrtWahl = d.ortWahl;
+          if(statusSetzen) p.status = 'kuendigung';
+          speichern();
+          renderRows();
+          toast('Kündigung als Word erstellt' + (statusSetzen ? ' — Status: Kündigung raus.' : '.'));
+        }
+      });
     });
     ra.querySelector('[data-a="dup"]').addEventListener('click', () => {
       const c = JSON.parse(JSON.stringify(p));

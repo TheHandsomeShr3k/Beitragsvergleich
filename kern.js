@@ -62,6 +62,7 @@ function ladeAlles(){
 }
 function sichere(){
   if(!mem) return;
+  snapshotVielleicht();
   if(store){
     try{
       store.setItem(K_KUNDEN, JSON.stringify({ kunden: mem.kunden }));
@@ -542,13 +543,340 @@ BVK.schnellVertrag = function(opts){
   if(g) g.focus();
 };
 
+/* ---------- Kündigungs-Engine (1:1 aus der Klassik-Ansicht übernommen) ---------- */
+function kSubject(d){
+  const bez = (d.bez || '').trim();
+  const vs = (d.vsnr || '').trim();
+  if(!bez) return vs ? 'Kündigung der Vertragsnummer ' + vs : 'Kündigung meines Vertrags';
+  let s = /versicherung$/i.test(bez) ? 'Kündigung meiner ' + bez : 'Kündigung \u2013 ' + bez;
+  if(vs) s += ', Vertragsnummer ' + vs;
+  return s;
+}
+function kObjekt(d){
+  const bez = (d.bez || '').trim();
+  if(!bez) return 'o. g. Vertragsnummer';
+  return /versicherung$/i.test(bez) ? 'meine o. g. ' + bez : 'den o. g. Vertrag';
+}
+function kBodyText(d){
+  let satz1;
+  if(d.termin){
+    satz1 = 'hiermit kündige ich ' + kObjekt(d) + ' fristgerecht zum ' + fmtDate(d.termin) +
+      (d.hilfsweise ? ', hilfsweise zum nächstmöglichen Termin.' : '.');
+  } else {
+    satz1 = 'hiermit kündige ich ' + kObjekt(d) + ' zum nächstmöglichen Termin.';
+  }
+  let satz2 = 'Bitte senden Sie mir eine schriftliche Kündigungsbestätigung unter Angabe des Beendigungszeitpunkts zu.';
+  if(d.rueckwerbung) satz2 += ' Eine Kontaktaufnahme Ihrerseits zum Zweck der Rückwerbung ist nicht erwünscht. Ich bitte Sie höflich, davon abzusehen.';
+  return { satz1, satz2 };
+}
+function buildKuendigungDocXml(d){
+  const { satz1, satz2 } = kBodyText(d);
+  const P = (text, o) => wP([wRun(text, Object.assign({sz:22}, o||{}))], Object.assign({after:60}, o||{}));
+  const EMPTY = wP([wRun('', {sz:22})], {after:60});
+  let body = '';
+  body += P(d.name) + P(d.strasse) + P(d.plzort);
+  body += EMPTY + EMPTY;
+  body += P(d.ges);
+  (d.adr ? d.adr.split(/\r?\n/).filter(x=>x.trim()) : []).forEach(l => { body += P(l); });
+  body += EMPTY;
+  if(d.fax){ body += P('Fax-Nr: ' + d.fax) + EMPTY; }
+  body += wP([wRun(d.ort + ', den ' + fmtDate(d.datum), {sz:22})], {align:'right', after:360});
+  body += wP([wRun(kSubject(d), {b:true, sz:22})], {after:280});
+  body += P('Sehr geehrte Damen und Herren,', {after:200});
+  body += P(satz1, {after:200});
+  body += P(satz2, {after:200});
+  body += P('Mit freundlichen Grüßen', {after:800});
+  body += wP([wRun('_________________________', {sz:22})], {after:40});
+  body += P(d.name);
+  return XMLH +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' +
+    body +
+    '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1418" w:bottom="1418" w:left="1418" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr>' +
+    '</w:body></w:document>';
+}
+BVK.kuendigung = {
+  subject: kSubject,
+  objekt: kObjekt,
+  body: kBodyText,
+  docXml: buildKuendigungDocXml,
+  docxBlob: function(d){
+    if(typeof global.JSZip === 'undefined') return Promise.reject(new Error('JSZip fehlt'));
+    const z = new global.JSZip();
+    z.file('[Content_Types].xml', CT_XML);
+    z.file('_rels/.rels', RELS_XML);
+    z.file('word/_rels/document.xml.rels', DOCRELS_XML);
+    z.file('word/styles.xml', STYLES_XML);
+    z.file('word/document.xml', buildKuendigungDocXml(d));
+    return z.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  },
+  exportDocx: async function(d){
+    const blob = await BVK.kuendigung.docxBlob(d);
+    const g = (d.ges || 'Versicherer').replace(/[^\wäöüÄÖÜß\- ]/g,'').trim().replace(/\s+/g,'_');
+    downloadBlob(blob, 'Kuendigung_' + g + '_' + new Date().toISOString().slice(0,10) + '.docx');
+  }
+};
+
+/* ---------- Adressbuch schreiben (Format identisch zur Klassik) ---------- */
+BVK.abSpeichern = function(name, adr, fax){
+  const k = normNameV(name) || (name || '').toLowerCase().trim();
+  if(!k) return false;
+  const ab = Object.assign({}, BVK.adressbuch());
+  ab[k] = { n: (name || '').trim(), a: (adr || '').trim(), f: (fax || '').trim(), ts: Date.now(), sa: 'ab', sf: 'ab' };
+  if(store){ try{ store.setItem(K_AB, JSON.stringify(ab)); }catch(e){} }
+  abCache = null;
+  return true;
+};
+function standTxt(v){
+  if(!v) return '';
+  if(v.sa === 'ab') return 'Eigenes Adressbuch' + (v.ts ? ' (' + new Date(v.ts).toLocaleDateString('de-DE') + ')' : '');
+  return BVK.STAND_LABEL[v.sa] || '';
+}
+
+/* ---------- Kündigungs-Dialog (aus jeder Ansicht aufrufbar) ---------- */
+BVK.kuendDialog = function(opts){
+  opts = opts || {};
+  const p = opts.policy || {};
+  const abs = opts.absender || {};
+  const doc = global.document;
+  let dl = doc.getElementById('bvkGesL');
+  if(!dl){
+    dl = doc.createElement('datalist');
+    dl.id = 'bvkGesL';
+    [...new Set(Object.values(BVK.adressbuch()).map(v => v.n).concat(BVK.VERZEICHNIS.map(v => v.n)))]
+      .sort((a, b) => a.localeCompare(b, 'de'))
+      .forEach(n => { const o = doc.createElement('option'); o.value = n; dl.appendChild(o); });
+    doc.body.appendChild(dl);
+  }
+  const ov = doc.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(12,22,42,.52);z-index:999;display:flex;align-items:flex-start;justify-content:center;padding:5vh 14px;overflow:auto';
+  const card = doc.createElement('div');
+  card.style.cssText = 'background:#fff;color:#1a2333;border-radius:13px;box-shadow:0 24px 60px rgba(10,20,40,.35);width:min(480px,100%);padding:16px 18px;font:13.5px/1.5 -apple-system,\'Segoe UI\',Roboto,sans-serif;margin-bottom:5vh';
+  const F = 'width:100%;box-sizing:border-box;border:1px solid #D9DEE7;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#1a2333';
+  const L = 'display:block;font-size:10.5px;letter-spacing:.05em;color:#7a8294;margin:9px 0 3px';
+  const C = 'display:flex;align-items:center;gap:7px;font-size:12.5px;margin-top:8px;color:#3a4356';
+  card.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">Kündigung erstellen' + (opts.kunde ? ' · ' + String(opts.kunde).replace(/</g,'&lt;') : '') + '</b><button data-x style="border:none;background:none;font-size:16px;color:#7a8294;cursor:pointer">✕</button></div>' +
+    '<label style="' + L + '">ABSENDER (VERSICHERUNGSNEHMER)</label><input data-f="name" style="' + F + '" placeholder="Vorname Nachname">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">STRASSE</label><input data-f="strasse" style="' + F + '"></div>' +
+      '<div><label style="' + L + '">PLZ UND ORT</label><input data-f="plzort" style="' + F + '"></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">ORT (DATUMSZEILE)</label><select data-f="ortwahl" style="' + F + '"><option value="Röthenbach">Röthenbach a. d. Pegnitz</option><option value="Schnaittach">Schnaittach</option><option value="__custom">Anderer Ort …</option></select></div>' +
+      '<div><label style="' + L + '">DATUM</label><input data-f="datum" type="date" style="' + F + '"></div>' +
+    '</div>' +
+    '<div data-ortrow style="display:none"><label style="' + L + '">ORT (MANUELL)</label><input data-f="ortcustom" style="' + F + '"></div>' +
+    '<label style="' + L + '">EMPFÄNGER — GESELLSCHAFT</label><input data-f="ges" list="bvkGesL" style="' + F + '" autocomplete="off">' +
+    '<label style="' + L + '">ANSCHRIFT (EINE ANGABE PRO ZEILE)</label><textarea data-f="adr" style="' + F + ';min-height:56px;resize:vertical"></textarea>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">FAX (OPTIONAL)</label><input data-f="fax" style="' + F + ';font-family:ui-monospace,monospace"></div>' +
+      '<div><label style="' + L + '">VERTRAGSNUMMER</label><input data-f="vsnr" style="' + F + ';font-family:ui-monospace,monospace"></div>' +
+    '</div>' +
+    '<div data-note style="font-size:11px;color:#1c7a4d;margin-top:5px"></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      '<div><label style="' + L + '">VERSICHERUNGSART (BETREFF)</label><input data-f="bez" style="' + F + '"></div>' +
+      '<div><label style="' + L + '">KÜNDIGUNG ZUM</label><input data-f="termin" type="date" style="' + F + '"></div>' +
+    '</div>' +
+    '<label style="' + C + '"><input data-f="hilfsweise" type="checkbox" checked> „hilfsweise zum nächstmöglichen Termin" ergänzen</label>' +
+    '<label style="' + C + '"><input data-f="rueckwerbung" type="checkbox" checked> Rückwerbung untersagen</label>' +
+    '<label style="' + C + '"><input data-f="status" type="checkbox" checked> Status auf „Kündigung raus" setzen</label>' +
+    '<label style="' + C + '"><input data-f="abmerken" type="checkbox"> Empfängerdaten im Adressbuch merken</label>' +
+    '<div data-warn style="display:none;color:#B3372B;font-size:12px;margin-top:8px"></div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">' +
+      '<button data-x style="border:1px solid #D9DEE7;background:#fff;border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;color:#1a2333">Abbrechen</button>' +
+      '<button data-ok style="border:none;background:#274690;color:#fff;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Als Word erstellen</button>' +
+    '</div>' +
+    '<div style="font-size:10.5px;color:#9aa2b2;margin-top:8px">Drucken und Sammel-Kündigungen weiterhin über die klassische Ansicht.</div>';
+  const q = s => card.querySelector('[data-f="' + s + '"]');
+  q('name').value = abs.name || '';
+  q('strasse').value = abs.strasse || '';
+  q('plzort').value = abs.ort || '';
+  const ow = opts.kOrtWahl || 'Röthenbach';
+  if(ow === 'Röthenbach' || ow === 'Schnaittach'){ q('ortwahl').value = ow; }
+  else { q('ortwahl').value = '__custom'; card.querySelector('[data-ortrow]').style.display = ''; q('ortcustom').value = ow; }
+  q('ortwahl').addEventListener('change', () => {
+    card.querySelector('[data-ortrow]').style.display = q('ortwahl').value === '__custom' ? '' : 'none';
+  });
+  q('datum').value = new Date().toISOString().slice(0,10);
+  q('vsnr').value = p.vsnr || '';
+  q('bez').value = kuendBez(p);
+  q('termin').value = p.ablauf || '';
+  function fuelleEmpfaenger(name){
+    const v = lookupVersicherer(name);
+    if(v){
+      q('ges').value = v.n;
+      q('adr').value = v.a || '';
+      q('fax').value = v.f || '';
+      card.querySelector('[data-note]').textContent = 'Anschrift: ' + standTxt(v) + ' — vor Versand kurz gegenprüfen.';
+    } else {
+      card.querySelector('[data-note]').textContent = name ? 'Keine Anschrift im Verzeichnis gefunden — bitte eintragen.' : '';
+    }
+  }
+  fuelleEmpfaenger(p.gesellschaft || '');
+  if(!q('ges').value) q('ges').value = p.gesellschaft || '';
+  q('ges').addEventListener('change', () => fuelleEmpfaenger(q('ges').value));
+  function zu(){ ov.remove(); doc.removeEventListener('keydown', escH); }
+  function escH(e){ if(e.key === 'Escape') zu(); }
+  doc.addEventListener('keydown', escH);
+  ov.addEventListener('click', e => { if(e.target === ov) zu(); });
+  card.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', zu));
+  card.querySelector('[data-ok]').addEventListener('click', async () => {
+    const warn = card.querySelector('[data-warn]');
+    const name = q('name').value.trim();
+    const ges = q('ges').value.trim();
+    const adr = q('adr').value.trim();
+    if(!name || !ges || !adr){
+      warn.textContent = 'Bitte Absendername, Gesellschaft und Anschrift ausfüllen.';
+      warn.style.display = 'block';
+      return;
+    }
+    const ortWahl = q('ortwahl').value === '__custom' ? q('ortcustom').value.trim() : q('ortwahl').value;
+    const d = {
+      name: name, strasse: q('strasse').value.trim(), plzort: q('plzort').value.trim(),
+      ort: ortWahl || 'Röthenbach', ortWahl: ortWahl || 'Röthenbach',
+      datum: q('datum').value, hilfsweise: q('hilfsweise').checked, rueckwerbung: q('rueckwerbung').checked,
+      bez: q('bez').value.trim(), vsnr: q('vsnr').value.trim(), termin: q('termin').value,
+      ges: ges, adr: adr, fax: q('fax').value.trim()
+    };
+    if(q('abmerken').checked) BVK.abSpeichern(ges, adr, d.fax);
+    try{
+      await BVK.kuendigung.exportDocx(d);
+    }catch(e){
+      warn.textContent = 'Export fehlgeschlagen — Internetverbindung für JSZip nötig.';
+      warn.style.display = 'block';
+      return;
+    }
+    const statusSetzen = q('status').checked;
+    zu();
+    if(typeof opts.onExported === 'function'){ try{ opts.onExported(d, statusSetzen); }catch(e){} }
+  });
+  doc.body.appendChild(ov);
+  ov.appendChild(card);
+};
+
+/* ---------- Version, Badge und Speicher-Warnung ---------- */
+BVK.VERSION = '2.1';
+function uiEinhaengen(){
+  const doc = global.document;
+  if(!doc || !doc.body) return;
+  if(!doc.getElementById('bvkVer')){
+    const a = doc.createElement('a');
+    a.id = 'bvkVer';
+    a.href = 'ansichten.html';
+    a.textContent = 'BV v' + BVK.VERSION;
+    a.title = 'Ansichten und Verwaltung öffnen';
+    a.style.cssText = 'position:fixed;right:8px;bottom:6px;z-index:40;font:10px -apple-system,sans-serif;color:rgba(120,130,150,.75);text-decoration:none;background:rgba(255,255,255,.5);border-radius:5px;padding:1px 6px';
+    const st = doc.createElement('style');
+    st.textContent = '@media print{#bvkVer,#bvkWarn{display:none !important}}';
+    doc.body.appendChild(st);
+    doc.body.appendChild(a);
+  }
+  if(!store && !doc.getElementById('bvkWarn')){
+    const w = doc.createElement('div');
+    w.id = 'bvkWarn';
+    w.textContent = 'Achtung: Der Browser-Speicher ist nicht verfügbar (privater Modus?). Eingaben gehen beim Schließen verloren.';
+    w.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:998;background:#B3372B;color:#fff;font:12.5px -apple-system,sans-serif;text-align:center;padding:7px 12px';
+    doc.body.appendChild(w);
+  }
+}
+if(global.document){
+  if(global.document.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', uiEinhaengen);
+  else uiEinhaengen();
+}
+
+/* ---------- Automatische Ringpuffer-Sicherung (letzte 7 Tage) ---------- */
+const K_SNAP = 'bv_snapshots_v1';
+let snapTag = null;
+function snapshotVielleicht(){
+  if(!store) return;
+  const heute = new Date().toISOString().slice(0, 10);
+  if(snapTag === heute) return;
+  snapTag = heute;
+  try{
+    const rohK = store.getItem(K_KUNDEN);
+    if(!rohK || rohK.length > 900000) return;
+    let ring = [];
+    try{ ring = JSON.parse(store.getItem(K_SNAP) || '[]') || []; }catch(e){}
+    if(ring.some(s => s.tag === heute)) return;
+    const kunden = (JSON.parse(rohK) || {}).kunden || [];
+    let ab = {};
+    try{ ab = JSON.parse(store.getItem(K_AB) || '{}') || {}; }catch(e){}
+    ring.push({ tag: heute, ts: Date.now(), n: kunden.length, kunden: kunden, adressbuch: ab });
+    while(ring.length > 7) ring.shift();
+    store.setItem(K_SNAP, JSON.stringify(ring));
+  }catch(e){}
+}
+BVK.snapshots = function(){
+  if(!store) return [];
+  try{
+    return (JSON.parse(store.getItem(K_SNAP) || '[]') || []).map((s, i) => ({ i: i, tag: s.tag, ts: s.ts, n: s.n }));
+  }catch(e){ return []; }
+};
+BVK.snapshotWiederherstellen = function(i){
+  if(!store) return false;
+  try{
+    const ring = JSON.parse(store.getItem(K_SNAP) || '[]') || [];
+    const s = ring[i];
+    if(!s || !Array.isArray(s.kunden) || !s.kunden.length) return false;
+    const heute = new Date().toISOString().slice(0, 10);
+    let aktuellK = [];
+    try{ aktuellK = (JSON.parse(store.getItem(K_KUNDEN) || 'null') || {}).kunden || []; }catch(e){}
+    let aktuellA = {};
+    try{ aktuellA = JSON.parse(store.getItem(K_AB) || '{}') || {}; }catch(e){}
+    ring.push({ tag: heute + ' · vor Wiederherstellung', ts: Date.now(), n: aktuellK.length, kunden: aktuellK, adressbuch: aktuellA });
+    while(ring.length > 9) ring.shift();
+    store.setItem(K_SNAP, JSON.stringify(ring));
+    store.setItem(K_KUNDEN, JSON.stringify({ kunden: s.kunden }));
+    store.setItem(K_AB, JSON.stringify(s.adressbuch || {}));
+    mem = null;
+    abCache = null;
+    ladeAlles();
+    sichere();
+    return true;
+  }catch(e){ return false; }
+};
+
+/* ---------- Gesamtsicherung einspielen ---------- */
+function sigVonState(st){
+  return (st.kunde || '').trim().toLowerCase() + '#' +
+    st.policies.length + '#' +
+    st.policies.map(p => (p.vsnr || '') + '|' + (p.gesellschaft || '') + '|' + (p.beitragF ?? '')).sort().join(';');
+}
+BVK.importGesamt = function(daten){
+  let liste = null;
+  if(daten && Array.isArray(daten.kunden)){
+    liste = daten.kunden.map(k => ensureStateShape(k.state || k));
+  } else if(daten && Array.isArray(daten.policies)){
+    liste = [ ensureStateShape(daten) ];
+  }
+  if(!liste || !liste.length) return null;
+  const d = ladeAlles();
+  const vorhanden = new Set(d.kunden.map(k => sigVonState(k.state)));
+  let neu = 0, uebersprungen = 0;
+  liste.forEach(st => {
+    const s = sigVonState(st);
+    if(vorhanden.has(s)){ uebersprungen++; return; }
+    vorhanden.add(s);
+    d.kunden.push({ id: 'k' + Date.now() + Math.random().toString(36).slice(2,6), angelegt: Date.now(), geaendert: Date.now(), state: st });
+    neu++;
+  });
+  if(daten && daten.adressbuch && typeof daten.adressbuch === 'object'){
+    const ab = Object.assign({}, BVK.adressbuch());
+    for(const k in daten.adressbuch){
+      const e = daten.adressbuch[k];
+      if(e && e.n && (!ab[k] || (e.ts || 0) >= (ab[k].ts || 0))) ab[k] = e;
+    }
+    if(store){ try{ store.setItem(K_AB, JSON.stringify(ab)); }catch(e){} }
+    abCache = null;
+  }
+  sichere();
+  return { neu: neu, uebersprungen: uebersprungen };
+};
+
 /* ---------- Verwaltung: Kunden-Dubletten bereinigen ---------- */
 BVK.bereinigeDubletten = function(){
   const d = ladeAlles();
-  const sig = k =>
-    (k.state.kunde || '').trim().toLowerCase() + '#' +
-    k.state.policies.length + '#' +
-    k.state.policies.map(p => (p.vsnr || '') + '|' + (p.gesellschaft || '') + '|' + (p.beitragF ?? '')).sort().join(';');
+  const sig = k => sigVonState(k.state);
   const beste = {};
   d.kunden.forEach(k => {
     const s = sig(k);

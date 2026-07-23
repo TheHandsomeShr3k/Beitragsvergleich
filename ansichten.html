@@ -56,11 +56,18 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <div class="sek">
+  <h2>AUTOMATISCHE SICHERUNGEN · LETZTE 7 TAGE</h2>
+  <div class="kliste" id="snapListe"></div>
+</div>
+
+<div class="sek">
   <h2>STAMMDATEN · KUNDEN VERWALTEN</h2>
   <div class="kliste" id="kListe"></div>
   <div class="werk">
     <button class="btn" id="btnDubl">Duplikate bereinigen</button>
     <button class="btn" id="btnBackup">Alles sichern (JSON)</button>
+    <button class="btn" id="btnImport">Sicherung einspielen</button>
+    <input type="file" id="importDatei" accept=".json,application/json" style="display:none">
     <span class="hint">Erkennt Kunden mit identischem Namen und identischen Verträgen und behält jeweils die neueste Version. Löschen ist endgültig — Verträge des Kunden gehen mit.</span>
   </div>
 </div>
@@ -210,8 +217,62 @@ window.addEventListener('pageshow', e => { if(e.persisted) resync(); });
 window.addEventListener('focus', resync);
 document.addEventListener('visibilitychange', () => { if(!document.hidden) resync(); });
 
+function renderSnaps(){
+  if(!hatKern) return;
+  const w = $('snapListe');
+  w.innerHTML = '';
+  const liste = BVK.snapshots();
+  if(!liste.length){
+    w.innerHTML = '<div class="krow"><span class="m">Noch keine automatische Sicherung — sie entsteht beim ersten Speichern eines Tages.</span></div>';
+    return;
+  }
+  [...liste].reverse().forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'krow';
+    row.innerHTML =
+      '<span class="n">' + esc(s.tag) + '</span>' +
+      '<span class="m">' + s.n + ' Kunden · ' + new Date(s.ts).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'}) + ' Uhr</span>' +
+      '<button class="del" style="color:var(--ak)">Wiederherstellen</button>';
+    row.querySelector('button').addEventListener('click', () => {
+      if(!confirm('Stand vom ' + s.tag + ' (' + s.n + ' Kunden) wiederherstellen? Der aktuelle Stand wird vorher automatisch gesichert.')) return;
+      if(BVK.snapshotWiederherstellen(s.i)){
+        toast('Stand wiederhergestellt.');
+        renderKunden();
+        renderSnaps();
+      } else {
+        toast('Wiederherstellen fehlgeschlagen.');
+      }
+    });
+    w.appendChild(row);
+  });
+}
+$('btnImport').addEventListener('click', () => $('importDatei').click());
+$('importDatei').addEventListener('change', e => {
+  const datei = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!datei || !hatKern) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let daten = null;
+    try{ daten = JSON.parse(r.result); }catch(err){}
+    if(!daten){ toast('Datei konnte nicht gelesen werden.'); return; }
+    const anzahl = Array.isArray(daten.kunden) ? daten.kunden.length : (Array.isArray(daten.policies) ? 1 : 0);
+    if(!anzahl){ toast('Keine Kundendaten in der Datei gefunden.'); return; }
+    if(!confirm(anzahl + ' Kunde' + (anzahl === 1 ? '' : 'n') + ' gefunden. Zusammenführen? Bereits identisch vorhandene werden übersprungen.')) return;
+    const erg = BVK.importGesamt(daten);
+    if(!erg){ toast('Import fehlgeschlagen.'); return; }
+    renderKunden();
+    renderSnaps();
+    toast(erg.neu + ' neu eingespielt, ' + erg.uebersprungen + ' übersprungen.');
+  };
+  r.readAsText(datei);
+});
+document.querySelector('.kopf p').insertAdjacentHTML('beforeend',
+  hatKern ? ' <span style="color:#b6bdc9">· Version ' + BVK.VERSION + '</span>' : '');
+
 renderAnsichten();
 renderKunden();
+renderSnaps();
 </script>
 </body>
 </html>

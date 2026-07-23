@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pipeline · Bestandsvergleich</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="kern.js"></script>
 <style>
 :root{--bg:#F2F4F6;--col:#EAEDF1;--card:#fff;--line:#DDE2E9;--ink:#1D2733;--mut:#8592A2;--mut2:#5B6878;--ak:#155E4C;--amber:#8A6410;--rot:#B3372B;--mono:ui-monospace,'SF Mono',Menlo,monospace}
@@ -153,6 +154,7 @@ function render(){
         '<div class="akt">' +
           (si > 0 ? '<button data-a="l" title="Status zurück">◀</button>' : '') +
           (si < SPALTEN.length - 1 ? '<button data-a="r" title="Status weiter">▶</button>' : '') +
+          '<button data-a="ku" title="Kündigung erstellen (Word)">✉</button>' +
           '<a href="werkbank.html" data-a="w" title="In Werkbank öffnen">↗W</a>' +
           '<a href="index.html" data-a="k" title="Klassisch öffnen (Kündigung)">↗K</a>' +
         '</div>';
@@ -161,6 +163,25 @@ function render(){
         e.dataTransfer.setData('text/plain', x.kid + '|' + p.id);
       });
       k.addEventListener('dragend', () => k.classList.remove('drag'));
+      k.querySelector('[data-a="ku"]').addEventListener('click', () => {
+        const st = BVK.stateVon(x.kid);
+        const pp = st && st.policies.find(q => q.id === p.id);
+        if(!pp) return;
+        BVK.kuendDialog({
+          policy: pp,
+          kunde: st.kunde,
+          absender: st.absender,
+          kOrtWahl: st.kOrtWahl,
+          onExported: (d, statusSetzen) => {
+            st.absender = { name: d.name, strasse: d.strasse, ort: d.plzort };
+            st.kOrtWahl = d.ortWahl;
+            if(statusSetzen) pp.status = 'kuendigung';
+            BVK.speichern(x.kid, st);
+            render();
+            toast('Kündigung erstellt' + (statusSetzen ? ' — Karte wandert nach „Kündigung raus".' : '.'));
+          }
+        });
+      });
       const bl = k.querySelector('[data-a="l"]');
       if(bl) bl.addEventListener('click', () => setStatus(x.kid, p.id, SPALTEN[si - 1].id));
       const br = k.querySelector('[data-a="r"]');
