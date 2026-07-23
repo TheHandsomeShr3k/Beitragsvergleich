@@ -11,44 +11,47 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,'Segoe UI',Roboto,sans-serif;min-height:100vh}
 button{font-family:inherit;cursor:pointer}
-.top{display:flex;justify-content:space-between;align-items:baseline;padding:18px 22px 10px;flex-wrap:wrap;gap:8px}
+.shell{max-width:1120px;margin:0 auto;padding:18px 22px 30px}
+.top{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
 .top h1{margin:0;font-size:17px;font-weight:600}
 .top h1 small{font-weight:400;font-size:12px;color:var(--mut)}
-.top select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:118px;gap:11px;padding:8px 22px 26px;max-width:1120px}
-.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0;overflow:hidden}
-.tile .l{font-size:10.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:6px}
-.t-bilanz{grid-column:span 2;grid-row:span 2;background:#23262B;color:#F4F3F0;border-color:#23262B;display:flex;flex-direction:column}
-.t-bilanz .l{color:#9B9EA5}
-.bz{display:flex;gap:26px;margin-top:6px;flex-wrap:wrap}
+.top select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;background:#fff;color:var(--ink)}
+.tools{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:12px 0 14px}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:500;color:var(--ink)}
+.btn:hover{border-color:#CFCDC6}
+.btn.ak{background:#23262B;border-color:#23262B;color:#fff;font-weight:600}
+.tools select{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:12.5px;background:#fff;color:var(--ink);font-weight:600;max-width:230px}
+.tools .sep{width:1px;height:22px;background:var(--line)}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px}
+.tile{border-radius:16px;min-width:0}
+.t-bilanz{background:#23262B;color:#F4F3F0;padding:16px 18px;display:flex;gap:18px;align-items:center}
+.t-bilanz .l{font-size:10.5px;letter-spacing:.08em;color:#9B9EA5;margin-bottom:8px}
+.bz{display:flex;gap:26px;flex-wrap:wrap}
 .bz .v{font-family:var(--mono);font-size:21px;font-weight:600}
-.bz small{display:block;font-size:11px;color:#9B9EA5;font-family:-apple-system,sans-serif;font-weight:400}
-.bar{height:8px;border-radius:99px;background:#3A3E45;overflow:hidden;margin-top:auto}
+.bz small{display:block;font-size:11px;color:#9B9EA5;font-weight:400}
+.bar{height:8px;border-radius:99px;background:#3A3E45;overflow:hidden;margin-top:12px}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,#6FE0A8,#8FB6FF)}
-.t-bilanz .fuss{font-size:11.5px;color:#9B9EA5;margin-top:7px}
+.t-bilanz .fuss{font-size:11.5px;color:#9B9EA5;margin-top:9px}
 .t-bilanz .fuss a{color:#F4F3F0}
-.t-fristen{grid-column:span 2;grid-row:span 2;display:flex;flex-direction:column}
-.frow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F0EEE8;font-size:12.5px;gap:8px}
+.ring{flex:none;text-align:center}
+.ring b{display:block;font-size:11px;margin-top:4px;color:#C9CCD2;font-weight:600}
+.t-fristen{background:var(--card);border:1px solid var(--line);padding:14px 16px}
+.t-fristen .l{font-size:10.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:6px}
+.frow{display:flex;justify-content:space-between;align-items:center;padding:7px 4px;border-bottom:1px solid #F0EEE8;font-size:12.5px;gap:8px;cursor:pointer;border-radius:8px}
+.frow:hover{background:#F7F6F2}
 .frow:last-child{border-bottom:none}
 .frow .w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pill{flex:none;font-size:10.5px;font-weight:600;border-radius:99px;padding:2px 9px}
 .pill.rot{background:#FBE9E7;color:var(--rot)}
 .pill.amber{background:#FBF2DC;color:var(--amber)}
 .pill.gr{background:#EDF1EA;color:#4C6B52}
-.t-schnell{grid-column:span 2}
-.schnell{display:flex;gap:7px}
+.fleer{color:var(--mut);font-size:12.5px;padding:8px 0}
+.t-schnell{grid-column:1/-1;background:var(--card);border:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.t-schnell .l{font-size:10.5px;letter-spacing:.08em;color:var(--mut);flex:none}
+.schnell{flex:1;display:flex;gap:7px;min-width:260px}
 .schnell input{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px}
-.schnell button{border:none;border-radius:9px;background:#23262B;color:#fff;padding:8px 14px;font-size:12.5px;font-weight:600}
-.t-ring{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.t-ring b{font-size:12px;margin-top:3px}
-.t-letzt .k{font-size:12.5px;padding:3px 0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.t-letzt .k:hover{color:var(--ak)}
-.t-letzt .k small{color:var(--mut)}
-.t-akt{display:flex;flex-direction:column;gap:6px;justify-content:center}
-.t-akt button,.t-akt a{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:500;color:var(--ink);text-decoration:none;text-align:left}
-.t-akt button:hover,.t-akt a:hover{border-color:var(--ak);color:var(--ak)}
-.bwrap{max-width:1120px;padding:0 22px 26px}
-.bzone{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 16px}
+.schnell button{border:none;border-radius:9px;background:#23262B;color:#fff;padding:8px 15px;font-size:12.5px;font-weight:600}
+.bzone{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 16px;margin-top:12px}
 .bz-kopf{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .bz-kopf .l{font-size:10.5px;letter-spacing:.08em;color:var(--mut)}
 .bz-kopf .neu{color:var(--ak);font-weight:600;font-size:12.5px;cursor:pointer;border:none;background:none}
@@ -64,73 +67,86 @@ button{font-family:inherit;cursor:pointer}
 .bdelta.rd{color:var(--rot)}
 .bdelta.mut{color:#B9BBBF;font-weight:400}
 .bleer{color:var(--mut);font-size:12.5px;padding:10px 4px}
-@media (max-width:760px){.brow{grid-template-columns:46px 1.3fr 150px 64px}.brow .babl{display:none}}
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#23262B;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+#kernfehlt{display:none;margin:12px 0;background:#FBE9E7;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#23262B;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
 #toast.show{opacity:1}
-#kernfehlt{display:none;margin:14px 22px;background:#FBE9E7;color:var(--rot);border-radius:9px;padding:10px 14px;font-size:13px}
-@media (max-width:860px){.grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:auto}.t-bilanz,.t-fristen,.t-schnell{grid-column:span 2}}
+#printwrap{display:none}
+@media (max-width:860px){.grid{grid-template-columns:1fr}.brow{grid-template-columns:46px 1.3fr 150px 64px}.brow .babl{display:none}}
+@media print{
+  #app,#toast,#bvkVer,#bvkWarn{display:none !important}
+  body{background:#fff}
+  #printwrap{display:block}
+  #printwrap .blatt{width:100%;color:#111;font-size:11px;line-height:1.45;font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+  #printwrap h1{margin:0;font-size:17px;letter-spacing:.12em}
+  #printwrap .kd{font-size:12.5px;font-weight:700;margin-top:2px}
+  #printwrap .meta{font-size:9.5px;color:#5B6B80;margin-bottom:9px}
+  #printwrap table{width:100%;border-collapse:collapse;font-size:9.5px}
+  #printwrap td,#printwrap th{border:.75pt solid #7A8BA0;padding:4px 6px;vertical-align:top;text-align:left}
+  #printwrap th.v{background:#EDF2F9;color:#42536B;width:28%}
+  #printwrap th.b{background:#0E4DA4;color:#fff}
+  #printwrap .m{font-style:italic}
+  #printwrap .pr{font-weight:700}
+  #printwrap .an{color:#42536B;font-size:8.5px}
+  #printwrap .tot td{background:#EDF2F9;font-weight:700}
+  #printwrap .df td{font-weight:700}
+  #printwrap .df .gr{color:#177245}
+  #printwrap .df .rd{color:#A62B22}
+  @page{size:A4;margin:13mm}
+}
 </style>
 </head>
 <body>
-<div class="top">
-  <h1 id="gruss">Home <small id="datum"></small></h1>
-  <select id="ansichtSel" aria-label="Ansicht wählen">
-    <option value="home">Ansicht: Home</option>
-    <option value="werkbank">Werkbank öffnen</option>
-    <option value="pipeline">Pipeline öffnen</option>
-    <option value="dokument">Dokument-Studio öffnen</option>
-    <option value="assistent">Assistent öffnen</option>
-    <option value="copilot">Copilot öffnen</option>
-    <option value="klassisch">Klassisch öffnen</option>
-  </select>
-</div>
-<div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
+<div id="app">
+<div class="shell">
+  <div class="top">
+    <h1>Home <small id="datum"></small></h1>
+    <select id="ansichtSel" aria-label="Ansicht wählen"></select>
+  </div>
+  <div id="kernfehlt">kern.js konnte nicht geladen werden — bitte prüfen, ob die Datei mit im Repo liegt.</div>
 
-<div class="grid">
-  <div class="tile t-bilanz">
-    <div class="l" id="bilanzL">JAHRESBILANZ</div>
-    <div class="bz">
-      <div><small>Bisher</small><span class="v" id="vF">—</span></div>
-      <div><small>R+V</small><span class="v" id="vR" style="color:#8FB6FF">—</span></div>
-      <div><small>Ersparnis</small><span class="v" id="vS" style="color:#6FE0A8">—</span></div>
+  <div class="tools">
+    <select id="kundeSel" aria-label="Aktiver Kunde"></select>
+    <button class="btn" id="btnKVerw" title="Kunden anlegen, wechseln, löschen">Kunden verwalten</button>
+    <span class="sep"></span>
+    <button class="btn ak" id="btnVertrag">+ Vertrag</button>
+    <button class="btn" id="btnWord">Word-Vergleich</button>
+    <button class="btn" id="btnPrint">Drucken / PDF</button>
+    <span class="sep"></span>
+    <button class="btn" id="btnKundeNeu">+ Neuer Kunde</button>
+  </div>
+
+  <div class="grid">
+    <div class="tile t-bilanz">
+      <div style="flex:1;min-width:0">
+        <div class="l" id="bilanzL">JAHRESBILANZ</div>
+        <div class="bz">
+          <div><small>Bisher</small><span class="v" id="vF">—</span></div>
+          <div><small>R+V</small><span class="v" id="vR" style="color:#8FB6FF">—</span></div>
+          <div><small>Ersparnis</small><span class="v" id="vS" style="color:#6FE0A8">—</span></div>
+        </div>
+        <div class="bar"><i id="barI" style="width:0%"></i></div>
+        <div class="fuss" id="barTxt"></div>
+      </div>
+      <div class="ring">
+        <svg width="64" height="64" viewBox="0 0 60 60" role="img" aria-label="Ersparnisquote"><circle cx="30" cy="30" r="24" fill="none" stroke="#3A3E45" stroke-width="8"/><circle id="ringC" cx="30" cy="30" r="24" fill="none" stroke="#6FE0A8" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 151" transform="rotate(-90 30 30)"/></svg>
+        <b id="ringTxt">—</b>
+      </div>
     </div>
-    <div class="bar"><i id="barI" style="width:0%"></i></div>
-    <div class="fuss" id="barTxt"></div>
-  </div>
 
-  <div class="tile t-fristen">
-    <div class="l">FRISTEN-RADAR · ALLE KUNDEN · NÄCHSTE 90 TAGE</div>
-    <div id="fristen" style="flex:1;overflow:auto"></div>
-  </div>
+    <div class="tile t-fristen">
+      <div class="l">FRISTEN-RADAR · ALLE KUNDEN · 90 TAGE</div>
+      <div id="fristen"></div>
+    </div>
 
-  <div class="tile t-schnell">
-    <div class="l">SCHNELLERFASSUNG (Copilot)</div>
-    <div class="schnell">
-      <input id="schnellIn" type="text" placeholder="z. B. „phv allianz 737373, 60 € jährlich, ablauf 23.10.26“">
-      <button id="schnellGo">Erfassen</button>
+    <div class="tile t-schnell">
+      <span class="l">SCHNELLERFASSUNG (COPILOT)</span>
+      <div class="schnell">
+        <input id="schnellIn" type="text" placeholder="z. B. „phv allianz 737373, 60 € jährlich, ablauf 23.10.26“">
+        <button id="schnellGo">Erfassen</button>
+      </div>
     </div>
   </div>
 
-  <div class="tile t-ring">
-    <svg width="60" height="60" viewBox="0 0 60 60" role="img" aria-label="Ersparnisquote"><circle cx="30" cy="30" r="24" fill="none" stroke="#EEECE6" stroke-width="8"/><circle id="ringC" cx="30" cy="30" r="24" fill="none" stroke="#1C7A4D" stroke-width="8" stroke-linecap="round" stroke-dasharray="0 151" transform="rotate(-90 30 30)"/></svg>
-    <b id="ringTxt">—</b>
-  </div>
-
-  <div class="tile t-letzt">
-    <div class="l">ZULETZT BEARBEITET</div>
-    <div id="letzt"></div>
-  </div>
-
-  <div class="tile t-akt">
-    <button id="aVertrag">+ Vertrag erfassen</button>
-    <button id="aWord">Word-Vergleich (aktiver Kunde)</button>
-    <a href="werkbank.html">↗ Werkbank öffnen</a>
-    <button id="aNeu">+ Neuer Kunde</button>
-    <button id="aKVerw">Kunden verwalten</button>
-  </div>
-</div>
-
-<div class="bwrap">
   <div class="bzone" id="bestandZone">
     <div class="bz-kopf">
       <span class="l" id="bzTitel">BESTAND</span>
@@ -139,7 +155,9 @@ button{font-family:inherit;cursor:pointer}
     <div id="bzListe"></div>
   </div>
 </div>
+</div>
 
+<div id="printwrap"><div class="blatt" id="printBlatt"></div></div>
 <div id="toast" role="status"></div>
 
 <script>
@@ -162,62 +180,6 @@ $('datum').textContent = new Date().toLocaleDateString('de-DE', {weekday:'long',
 function alleKunden(){
   return hatKern ? BVK.liste().map(k => ({ meta: k, st: BVK.stateVon(k.id) })) : [];
 }
-function render(){
-  if(!hatKern) return;
-  const aktivId = BVK.aktivId();
-  const st = BVK.ensureStateShape(BVK.aktiverState());
-  $('bilanzL').textContent = ((st.kunde || 'Unbenannter Kunde').toUpperCase()) + ' · JAHRESBILANZ';
-  const t = BVK.totals(st);
-  $('vF').textContent = t.f == null ? '—' : BVK.fmtNum(t.f) + ' €';
-  $('vR').textContent = t.r == null ? '—' : BVK.fmtNum(t.r) + ' €';
-  $('vS').textContent = t.save == null ? '—' : (t.save >= 0 ? '−' : '+') + BVK.fmtNum(Math.abs(t.save)) + ' €';
-  let q = 0;
-  if(t.f && t.save != null && t.save > 0) q = Math.max(0, Math.min(100, Math.round(t.save / t.f * 100)));
-  $('barI').style.width = q + '%';
-  $('barTxt').innerHTML = q > 0
-    ? q + ' % günstiger über die verglichenen Verträge · <a href="#bestandZone">zum Bestand ↓</a>'
-    : '<a href="#bestandZone" style="color:#F4F3F0">Ersten Vertrag im Bestand erfassen ↓</a>';
-  const ring = 2 * Math.PI * 24;
-  $('ringC').setAttribute('stroke-dasharray', (ring * q / 100).toFixed(1) + ' ' + ring.toFixed(1));
-  $('ringTxt').textContent = q > 0 ? q + ' % Ersparnis' : 'noch offen';
-
-  const heute = new Date();
-  const fr = [];
-  alleKunden().forEach(({meta, st}) => {
-    (st.policies || []).forEach(p => {
-      const f = BVK.fristDate(p);
-      if(!f) return;
-      const tage = Math.round((f - heute) / 864e5);
-      if(tage >= -14 && tage <= 90) fr.push({ tage, p, kunde: meta.name, kid: meta.id });
-    });
-  });
-  fr.sort((a, b) => a.tage - b.tage);
-  const fw = $('fristen');
-  fw.innerHTML = fr.length ? '' : '<div style="color:var(--mut);font-size:12.5px;padding:8px 0">Keine Kündigungsfristen in den nächsten 90 Tagen.</div>';
-  fr.slice(0, 7).forEach(x => {
-    const row = document.createElement('div');
-    row.className = 'frow';
-    const cls = x.tage <= 14 ? 'rot' : (x.tage <= 45 ? 'amber' : 'gr');
-    row.innerHTML = '<span class="w"><b>' + esc(BVK.displayName(x.p)) + '</b> · ' + esc(x.p.gesellschaft || '—') + ' · ' + esc(x.kunde) + '</span>' +
-      '<span class="pill ' + cls + '">' + (x.tage < 0 ? 'Frist vorbei' : 'noch ' + x.tage + ' Tage') + '</span>';
-    row.style.cursor = 'pointer';
-    row.addEventListener('click', () => oeffneEditor(x.kid, x.p.id));
-    fw.appendChild(row);
-  });
-
-  renderBestand(st);
-
-  const lz = $('letzt');
-  lz.innerHTML = '';
-  BVK.liste().sort((a, b) => b.geaendert - a.geaendert).slice(0, 4).forEach(k => {
-    const el = document.createElement('div');
-    el.className = 'k';
-    el.innerHTML = '<b>' + esc(k.name) + '</b> <small>· ' + k.anzahl + ' Verträge</small>' + (k.id === aktivId ? ' <small style="color:var(--ak)">aktiv</small>' : '');
-    el.addEventListener('click', () => { BVK.setAktiv(k.id); render(); toast(k.name + ' ist jetzt aktiv.'); });
-    lz.appendChild(el);
-  });
-}
-
 function oeffneEditor(kid, pid){
   if(!hatKern) return;
   BVK.vertragDialog({
@@ -229,14 +191,24 @@ function oeffneEditor(kid, pid){
     }
   });
 }
+function renderKundeSel(){
+  const sel = $('kundeSel');
+  sel.innerHTML = '';
+  BVK.liste().forEach(k => {
+    const o = document.createElement('option');
+    o.value = k.id;
+    o.textContent = k.name + ' (' + k.anzahl + ')';
+    sel.appendChild(o);
+  });
+  sel.value = BVK.aktivId();
+}
 function renderBestand(st){
-  const aktivId = BVK.aktivId();
   $('bzTitel').textContent = 'BESTAND · ' + ((st.kunde || 'Unbenannter Kunde').toUpperCase());
   const w = $('bzListe');
   w.innerHTML = '';
   const arr = [...st.policies].sort((a, b) => (a.created || 0) - (b.created || 0));
   if(!arr.length){
-    w.innerHTML = '<div class="bleer">Noch keine Verträge — oben rechts „+ Vertrag" öffnet den Editor.</div>';
+    w.innerHTML = '<div class="bleer">Noch keine Verträge — oben „+ Vertrag" öffnet den Editor.</div>';
     return;
   }
   const heute = new Date();
@@ -266,29 +238,126 @@ function renderBestand(st){
     w.appendChild(row);
   });
 }
+function render(){
+  if(!hatKern) return;
+  renderKundeSel();
+  const st = BVK.ensureStateShape(BVK.aktiverState());
+  $('bilanzL').textContent = ((st.kunde || 'Unbenannter Kunde').toUpperCase()) + ' · JAHRESBILANZ';
+  const t = BVK.totals(st);
+  $('vF').textContent = t.f == null ? '—' : BVK.fmtNum(t.f) + ' €';
+  $('vR').textContent = t.r == null ? '—' : BVK.fmtNum(t.r) + ' €';
+  $('vS').textContent = t.save == null ? '—' : (t.save >= 0 ? '−' : '+') + BVK.fmtNum(Math.abs(t.save)) + ' €';
+  let q = 0;
+  if(t.f && t.save != null && t.save > 0) q = Math.max(0, Math.min(100, Math.round(t.save / t.f * 100)));
+  $('barI').style.width = q + '%';
+  $('barTxt').innerHTML = q > 0
+    ? q + ' % günstiger über die verglichenen Verträge · <a href="#bestandZone">zum Bestand ↓</a>'
+    : '<a href="#bestandZone" style="color:#F4F3F0">Ersten Vertrag im Bestand erfassen ↓</a>';
+  const ring = 2 * Math.PI * 24;
+  $('ringC').setAttribute('stroke-dasharray', (ring * q / 100).toFixed(1) + ' ' + ring.toFixed(1));
+  $('ringTxt').textContent = q > 0 ? q + ' % Ersparnis' : 'noch offen';
+
+  const heute = new Date();
+  const fr = [];
+  alleKunden().forEach(({meta, st}) => {
+    (st.policies || []).forEach(p => {
+      const f = BVK.fristDate(p);
+      if(!f) return;
+      const tage = Math.round((f - heute) / 864e5);
+      if(tage >= -14 && tage <= 90) fr.push({ tage, p, kunde: meta.name, kid: meta.id });
+    });
+  });
+  fr.sort((a, b) => a.tage - b.tage);
+  const fw = $('fristen');
+  fw.innerHTML = fr.length ? '' : '<div class="fleer">Keine Kündigungsfristen in den nächsten 90 Tagen.</div>';
+  fr.slice(0, 6).forEach(x => {
+    const row = document.createElement('div');
+    row.className = 'frow';
+    const cls = x.tage <= 14 ? 'rot' : (x.tage <= 45 ? 'amber' : 'gr');
+    row.innerHTML = '<span class="w"><b>' + esc(BVK.displayName(x.p)) + '</b> · ' + esc(x.p.gesellschaft || '—') + ' · ' + esc(x.kunde) + '</span>' +
+      '<span class="pill ' + cls + '">' + (x.tage < 0 ? 'Frist vorbei' : 'noch ' + x.tage + ' Tage') + '</span>';
+    row.addEventListener('click', () => oeffneEditor(x.kid, x.p.id));
+    fw.appendChild(row);
+  });
+
+  renderBestand(st);
+}
+
+/* ---------- Drucken / PDF (gleiches Blatt wie im Dokument-Studio) ---------- */
+function pZelle(p, side){
+  const leist = side === 'rv' ? p.leistRV : p.leistF;
+  const b = side === 'rv' ? BVK.rvEffective(p) : p.beitragF;
+  const z = side === 'rv' ? p.zwRV : p.zwF;
+  const alt = side !== 'rv' ? BVK.beitragsAlt(p) : null;
+  let h = '';
+  if(leist) h += leist.split(/\r?\n/).filter(x => x.trim()).map(l => '<div>' + esc(l) + '</div>').join('');
+  if(b != null){
+    h += '<div class="pr">' + BVK.fmtNum(b) + ' € ' + BVK.ZW[z].l + (alt ? ' <span class="an">(Stand ' + alt + ')</span>' : '') + '</div>';
+    if(z !== 'jaehrlich') h += '<div class="an">≙ ' + BVK.fmtNum(b * BVK.ZW[z].f) + ' € / Jahr</div>';
+  } else if(side === 'rv'){
+    h += '<div class="pr">0,00 €</div>';
+  }
+  return h;
+}
+function renderPrint(st){
+  const arr = [...st.policies].sort((a, b) => (a.created || 0) - (b.created || 0));
+  const fS = arr.reduce((s, p) => s + (BVK.annual(p, 'f') || 0), 0);
+  const rS = arr.reduce((s, p) => s + (BVK.annual(p, 'rv') || 0), 0);
+  const d = fS - rS;
+  let rows = '';
+  arr.forEach(p => {
+    let meta = '<div class="m" style="font-weight:700">' + esc(BVK.displayName(p)) + '</div>';
+    if(p.kennzeichen) meta += '<div class="m">' + esc(p.kennzeichen) + '</div>';
+    if(p.gesellschaft) meta += '<div class="m">' + esc(p.gesellschaft) + '</div>';
+    if(p.vsnr) meta += '<div class="m">' + esc(p.vsnr) + '</div>';
+    if(p.ablauf) meta += '<div class="m">' + esc(BVK.fmtDate(p.ablauf)) + '</div>';
+    if(p.personen) meta += '<div class="m">' + esc(p.personen) + '</div>';
+    rows += '<tr><td>' + meta + '</td><td>' + pZelle(p, 'f') + '</td><td>' + pZelle(p, 'rv') + '</td></tr>';
+  });
+  $('printBlatt').innerHTML =
+    '<h1>BEITRÄGE</h1>' +
+    (st.kunde ? '<div class="kd">' + esc(st.kunde) + '</div>' : '') +
+    '<div class="meta">Stand ' + BVK.todayStr() + ' · ' + arr.length + ' Verträge</div>' +
+    '<table><tr><th class="v">Vertrag</th><th class="b">' + esc(st.spalte || 'Anderer Versicherer') + '</th><th class="b">R+V</th></tr>' +
+    rows +
+    '<tr class="tot"><td>Gesamtsumme / Jahr</td><td>' + BVK.fmtNum(fS) + ' €</td><td>' + BVK.fmtNum(rS) + ' €</td></tr>' +
+    '<tr class="df"><td colspan="2">Differenz / Jahr (bisher − R+V)</td><td class="' + (d >= 0 ? 'gr' : 'rd') + '">' + (d < 0 ? '− ' : '') + BVK.fmtNum(Math.abs(d)) + ' €' + (d < 0 ? ' Mehrbeitrag' : '') + '</td></tr>' +
+    '</table>';
+}
+
+/* ---------- Aktionen ---------- */
+$('kundeSel').addEventListener('change', e => {
+  if(!hatKern) return;
+  BVK.setAktiv(e.target.value);
+  render();
+});
+$('btnKVerw').addEventListener('click', () => {
+  if(!hatKern) return;
+  BVK.kundenDialog({ onChange: render });
+});
+$('btnVertrag').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() : null, null));
 $('bzNeu').addEventListener('click', () => oeffneEditor(hatKern ? BVK.aktivId() : null, null));
-$('aWord').addEventListener('click', async () => {
+$('btnWord').addEventListener('click', async () => {
   if(!hatKern) return;
   const st = BVK.aktiverState();
   if(!st.policies.length){ toast('Der aktive Kunde hat noch keine Verträge.'); return; }
   try{ await BVK.exportVergleichDocx(st); toast('Word-Datei erstellt.'); }
   catch(e){ toast('Export fehlgeschlagen — Internetverbindung nötig.'); }
 });
-$('aNeu').addEventListener('click', () => {
+$('btnPrint').addEventListener('click', () => {
+  if(!hatKern) return;
+  const st = BVK.ensureStateShape(BVK.aktiverState());
+  if(!st.policies.length){ toast('Der aktive Kunde hat noch keine Verträge.'); return; }
+  renderPrint(st);
+  window.print();
+});
+$('btnKundeNeu').addEventListener('click', () => {
   if(!hatKern) return;
   const n = prompt('Name des neuen Kunden:', '');
   if(n === null) return;
   BVK.neu((n || '').trim());
   render();
   toast('Kunde angelegt und aktiviert.');
-});
-$('aKVerw').addEventListener('click', () => {
-  if(!hatKern) return;
-  BVK.kundenDialog({ onChange: render });
-});
-$('aVertrag').addEventListener('click', () => {
-  if(!hatKern) return;
-  BVK.schnellVertrag({ onDone: () => { render(); toast('Vertrag gespeichert.'); } });
 });
 $('schnellGo').addEventListener('click', () => {
   const v = $('schnellIn').value.trim();
